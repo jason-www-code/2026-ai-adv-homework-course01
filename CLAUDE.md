@@ -27,7 +27,7 @@ rm database.sqlite*                  # 重置資料庫（下次啟動自動建�
 - 購物車使用 `cartRoutes.js` 內的 `dualAuth`：有 Bearer token 以 `user_id` 為擁有者（token 無效直接 401，不退回訪客模式），否則以 `X-Session-Id` 為擁有者；訪客購物車登入後不會合併。結帳只讀取 `user_id` 購物車。
 - 資料庫沒有 migration：`CREATE TABLE IF NOT EXISTS` 不會修改既有表，改 schema 需刪除 `database.sqlite*` 或手寫 `ALTER TABLE`。外鍵已啟用且沒有 `ON DELETE`；SQL 一律使用 `?` 參數綁定，多步驟寫入包在 `db.transaction` 中。
 - 測試直接讀寫正式的 `database.sqlite`，且 `vitest.config.js` 的 `sequence.files` 實際上不控制檔案順序——每個測試檔必須在 `beforeAll` 自行建立資料（`registerUser()`、`getAdminToken()`），不可依賴其他檔案。
-- 綠界金流（`src/services/ecpay.js`）只在本機執行、收不到 Server Notify：付款結果只能以 `QueryTradeInfo/V5` 主動查詢並驗證 CheckMacValue、比對金額後才改訂單狀態，不可直接採信導回或通知的 body；付款方式固定 `Credit`。改動綠界相關程式前先載入 `ecpay` skill 並查官方規格。
+- 綠界金流（`src/services/ecpay.js`）只在本機執行、收不到 Server Notify：付款結果只能以 `QueryTradeInfo/V5` 主動查詢並驗證 CheckMacValue、比對金額後才改訂單狀態，不可直接採信導回或通知的 body；付款方式固定 `Credit`。改動綠界相關程式前先載入 `ecpay` skill（未納入 git，安裝方式見 `docs/README.md`）並查官方規格。
 - 新增或修改端點時，同步更新該路由上方的 `@openapi` JSDoc；`/admin/*` 頁面只有前端檢查，資料保護必須靠 API 的 `authMiddleware` + `adminMiddleware`。
 - 功能開發使用 `docs/plans/` 記錄計畫（`YYYY-MM-DD-<feature-name>.md`，User Story → Spec → Tasks）；完成後移至 `docs/plans/archive/`，並更新 `docs/FEATURES.md` 與 `docs/CHANGELOG.md`。
 

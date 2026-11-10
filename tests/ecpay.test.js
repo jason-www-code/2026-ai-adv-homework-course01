@@ -3,8 +3,14 @@ const { app, request, registerUser } = require('./setup');
 const db = require('../src/database');
 const ecpay = require('../src/services/ecpay');
 
-const vectors = require(path.join(__dirname, '..', '.claude', 'skills', 'ecpay', 'test-vectors', 'checkmacvalue.json'))
-  .vectors.filter((v) => v.method === 'SHA256' && v.params);
+const fs = require('fs');
+
+// 官方測試向量來自綠界 ECPay skill（授權不允許重新散布，未納入版本控制；安裝方式見 docs/README.md）
+const VECTORS_PATH = path.join(__dirname, '..', '.claude', 'skills', 'ecpay', 'test-vectors', 'checkmacvalue.json');
+const hasVectors = fs.existsSync(VECTORS_PATH);
+const vectors = hasVectors
+  ? require(VECTORS_PATH).vectors.filter((v) => v.method === 'SHA256' && v.params)
+  : [];
 
 /** 建立使用者 + 1 件商品的 pending 訂單 */
 async function createPendingOrder() {
@@ -51,7 +57,7 @@ function mockQueryResponse(fields, { tamper = false, status = 200 } = {}) {
 }
 
 describe('ECPay CheckMacValue', () => {
-  it('should match official SHA256 test vectors', () => {
+  it.skipIf(!hasVectors)('should match official SHA256 test vectors', () => {
     expect(vectors.length).toBeGreaterThan(0);
     for (const v of vectors) {
       expect(ecpay.generateCheckMacValue(v.params, v.hashKey, v.hashIV)).toBe(v.expected);
@@ -59,7 +65,12 @@ describe('ECPay CheckMacValue', () => {
   });
 
   it('should verify signed params and reject tampered ones', () => {
-    const v = vectors[0];
+    // 沒有安裝 skill 時，改用自行簽章的參數（仍可驗證竄改偵測）
+    const v = vectors[0] || (() => {
+      const { hashKey, hashIv } = ecpay.getConfig();
+      const params = { MerchantID: '3002607', MerchantTradeNo: 'TEST0000000000000001', TotalAmount: '100' };
+      return { params, hashKey, hashIV: hashIv, expected: ecpay.generateCheckMacValue(params, hashKey, hashIv) };
+    })();
     const signed = { ...v.params, CheckMacValue: v.expected };
     expect(ecpay.verifyCheckMacValue(signed, v.hashKey, v.hashIV)).toBe(true);
     expect(ecpay.verifyCheckMacValue({ ...signed, TotalAmount: '101' }, v.hashKey, v.hashIV)).toBe(false);

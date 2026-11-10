@@ -32,6 +32,17 @@ npm start
 
 開啟 <http://localhost:3001>。
 
+### 安裝綠界 ECPay skill（選用，建議）
+
+綠界相關開發與部分測試使用綠界官方的 AI skill。其授權（All Rights Reserved）不允許重新散布，因此**未納入本 repo**，需自行下載到 `.claude/skills/ecpay`：
+
+```bash
+git clone https://github.com/ECPay/ECPay-API-Skill.git .claude/skills/ecpay
+```
+
+- Claude Code 會自動載入，`CLAUDE.md` 要求改動綠界程式前先使用此 skill。
+- `tests/ecpay.test.js` 的「官方 CheckMacValue 測試向量」測試會讀取 `.claude/skills/ecpay/test-vectors/checkmacvalue.json`；未安裝時該測試自動跳過，其餘測試照常執行。
+
 - 第一次啟動會自動建立 `database.sqlite`，並寫入 8 筆商品與管理員帳號。
 - 管理員：`admin@hexschool.com` / `12345678`，登入後從 header 的「後台管理」進入 `/admin/products`。
 - 一般會員可在 `/login` 的註冊分頁建立。
