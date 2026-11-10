@@ -251,5 +251,10 @@ router.patch('/:id/pay', (req, res) => { ... });
    - [ ] 文件更新
    ```
 
-3. 功能完成後：將計畫檔移至 `docs/plans/archive/`（檔名不變）。
-4. 更新 `docs/FEATURES.md`（狀態與行為描述）和 `docs/CHANGELOG.md`。
+3. 功能完成後：在計畫檔開頭標註完成狀態、勾選 Tasks，再用 `mv` 移至 `docs/plans/archive/`（檔名不變）：
+
+   ```bash
+   mv docs/plans/2026-11-11-ecpay-aio-integration.md docs/plans/archive/
+   ```
+
+4. 更新 `docs/FEATURES.md`（狀態總覽表標記 ✅ 完成或 🚧 進行中，並寫行為描述：參數、業務邏輯、錯誤情境）和 `docs/CHANGELOG.md`（尚未定版放 `## [Unreleased]`，分類用 `### Added / Changed / Fixed / Removed`）；新增路由或資料表欄位時同步更新 `docs/ARCHITECTURE.md` 的路由表（REST API 與頁面路由）與 Schema。
