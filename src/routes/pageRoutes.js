@@ -55,6 +55,12 @@ router.get('/orders/:id', function (req, res) {
   });
 });
 
+// 綠界 OrderResultURL：消費者付款後瀏覽器被導回（Form POST）。
+// 不採信 body 內容，只導回訂單頁，由前端呼叫 /api/orders/:id/ecpay/verify 主動查詢付款結果。
+router.post('/ecpay/result/:orderId', function (req, res) {
+  res.redirect(302, '/orders/' + encodeURIComponent(req.params.orderId) + '?payment=return');
+});
+
 // Admin pages
 router.get('/admin/products', function (req, res) {
   renderAdmin(res, 'products', {

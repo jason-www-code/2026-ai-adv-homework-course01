@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 const authMiddleware = require('../middleware/authMiddleware');
+const { createPaymentAttempt, syncOrderPayments } = require('../services/ecpayPayment');
 
 const router = express.Router();
 
@@ -412,6 +413,151 @@ router.patch('/:id/pay', (req, res) => {
     data: { ...updated, items },
     error: null,
     message: action === 'success' ? '付款成功' : '付款失敗'
+  });
+});
+
+/**
+ * @openapi
+ * /api/orders/{id}/ecpay/checkout:
+ *   post:
+ *     summary: 建立綠界付款（AIO 信用卡），回傳要 POST 到綠界的表單參數
+ *     description: 每次呼叫都會產生新的 MerchantTradeNo（綠界要求永久唯一）。前端需以表單整頁 submit 到 action，不可使用 iframe。
+ *     tags: [ECPay]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 已產生付款參數
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: string
+ *                       description: 綠界 AioCheckOut/V5 網址
+ *                     params:
+ *                       type: object
+ *                       description: 表單欄位（含 CheckMacValue）
+ *                 error:
+ *                   type: string
+ *                   nullable: true
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: 訂單狀態不是 pending
+ *       404:
+ *         description: 訂單不存在
+ */
+router.post('/:id/ecpay/checkout', (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.userId);
+  if (!order) {
+    return res.status(404).json({ data: null, error: 'NOT_FOUND', message: '訂單不存在' });
+  }
+  if (order.status !== 'pending') {
+    return res.status(400).json({
+      data: null,
+      error: 'INVALID_STATUS',
+      message: '訂單狀態不是 pending，無法付款'
+    });
+  }
+
+  const checkout = createPaymentAttempt(order);
+  res.json({ data: checkout, error: null, message: '已建立綠界付款' });
+});
+
+const VERIFY_MESSAGES = {
+  paid: '付款成功',
+  pending: '尚未收到付款確認，請稍後再查詢',
+  failed: '付款未完成，請重新付款',
+  mismatch: '付款金額與訂單不符，請聯繫客服',
+  none: '尚未建立綠界付款'
+};
+
+/**
+ * @openapi
+ * /api/orders/{id}/ecpay/verify:
+ *   post:
+ *     summary: 主動向綠界查詢付款結果並同步訂單狀態
+ *     description: 本專案無法接收綠界 Server Notify，付款結果以 QueryTradeInfo/V5 查詢（驗證 CheckMacValue、比對金額）後才更新。訂單已付款時直接回傳，不會再呼叫綠界。
+ *     tags: [ECPay]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 查詢完成（付款結果見 data.result.status）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order:
+ *                       type: object
+ *                     result:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                           enum: [paid, pending, failed, mismatch, none]
+ *                         tradeStatus:
+ *                           type: string
+ *                           nullable: true
+ *                 error:
+ *                   type: string
+ *                   nullable: true
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: 訂單不存在
+ *       429:
+ *         description: 綠界查詢 API 限速（ECPAY_RATE_LIMITED）
+ *       502:
+ *         description: 綠界查詢失敗或回應驗證失敗（ECPAY_QUERY_FAILED）
+ */
+router.post('/:id/ecpay/verify', async (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.userId);
+  if (!order) {
+    return res.status(404).json({ data: null, error: 'NOT_FOUND', message: '訂單不存在' });
+  }
+
+  let result;
+  try {
+    result = await syncOrderPayments(order.id);
+  } catch (err) {
+    console.error('[ECPay] verify failed:', err.message);
+    const rateLimited = err.code === 'ECPAY_RATE_LIMITED';
+    return res.status(rateLimited ? 429 : 502).json({
+      data: null,
+      error: rateLimited ? 'ECPAY_RATE_LIMITED' : 'ECPAY_QUERY_FAILED',
+      message: rateLimited ? '查詢太頻繁，請稍後再試' : '暫時無法向綠界查詢付款結果，請稍後再試'
+    });
+  }
+
+  const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
+  const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+
+  res.json({
+    data: { order: { ...updated, items }, result },
+    error: null,
+    message: VERIFY_MESSAGES[result.status]
   });
 });
 

@@ -66,6 +66,25 @@ function initializeDatabase() {
       quantity INTEGER NOT NULL,
       FOREIGN KEY (order_id) REFERENCES orders(id)
     );
+
+    -- 綠界付款嘗試：MerchantTradeNo 永久唯一，每次前往綠界付款都建立一筆
+    CREATE TABLE IF NOT EXISTS ecpay_payments (
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL,
+      merchant_trade_no TEXT UNIQUE NOT NULL,
+      total_amount INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'paid', 'failed')),
+      trade_no TEXT,
+      payment_type TEXT,
+      payment_date TEXT,
+      trade_status TEXT,
+      rtn_msg TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (order_id) REFERENCES orders(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ecpay_payments_order_id ON ecpay_payments(order_id);
   `);
 
   // Seed data

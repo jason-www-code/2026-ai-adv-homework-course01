@@ -71,21 +71,28 @@
     </div>
 
     <!-- Payment Buttons -->
-    <div v-if="order.status === 'pending'" class="flex gap-4">
-      <button
-        @click="handlePaySuccess"
-        :disabled="paying"
-        class="bg-sage text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-sage/90 transition-colors disabled:opacity-50"
-      >
-        {{ paying ? '處理中...' : '付款成功' }}
-      </button>
-      <button
-        @click="handlePayFail"
-        :disabled="paying"
-        class="bg-red-500 text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
-      >
-        {{ paying ? '處理中...' : '付款失敗' }}
-      </button>
+    <div v-if="order.status === 'pending'" class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-medium text-text-primary mb-3">付款</h2>
+      <div class="flex flex-wrap gap-4">
+        <button
+          @click="goEcpay"
+          :disabled="redirecting || verifying"
+          class="bg-rose-primary text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-rose-dark transition-colors disabled:opacity-50"
+        >
+          {{ redirecting ? '前往綠界中...' : '前往綠界付款' }}
+        </button>
+        <button
+          @click="verifyPayment"
+          :disabled="redirecting || verifying"
+          class="border border-rose-primary text-rose-primary px-8 py-3 rounded-full text-sm font-medium hover:bg-rose-bg transition-colors disabled:opacity-50"
+        >
+          {{ verifying ? '查詢中...' : '重新查詢付款結果' }}
+        </button>
+      </div>
+      <p class="text-xs text-text-muted mt-4 leading-relaxed">
+        將以綠界信用卡付款（測試環境）。測試卡號 4311-9522-2222-2222，有效期限任意未來月年，安全碼任意三碼，3D 驗證碼 1234。<br>
+        付款完成後會自動導回本頁並向綠界查詢結果；若狀態未更新，請按「重新查詢付款結果」。
+      </p>
     </div>
   </template>
 </div>
