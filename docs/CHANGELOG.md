@@ -8,6 +8,9 @@
 
 ### Added
 
+- 新錯誤代碼 `ECPAY_NOT_CONFIGURED`（503，2026-11-19）：綠界設定錯誤時 `POST /api/orders/:id/ecpay/checkout`、`/verify` 回傳，checkout 不建立付款嘗試、verify 不呼叫綠界。
+- `tests/ecpay.test.js` 新增 9 個綠界設定檢查測試（2026-11-19），全套測試由 50 個增為 59 個。
+- 文件：已歸檔計畫 `docs/plans/archive/2026-11-19-ecpay-config-guard.md`；FEATURES §8.1 新增「設定檢查」。
 - Claude Code skill `playwright-e2e-test`（2026-11-19）：以 Playwright MCP 跑「首頁加入購物車 → 註冊 → 結帳 → 綠界 stage 信用卡付款 → 訂單已付款」的手動 E2E，預設 Sonnet／high effort，結束時 `screenshots/` 只留一張截圖；說明見 `docs/TESTING.md` §8。
 - 專案層級 Playwright MCP 設定 `.mcp.json`（2026-11-19）：`npx @playwright/mcp@latest --isolated --output-dir ./screenshots`。
 - Claude Code 沙箱輔助腳本 `scripts/`（2026-11-19）：`dev-server.sh`（依 `.nvmrc` 切 Node 後啟動）、`health-check.sh`（等待 HTTP 200）、`stop-server.sh`（依埠號停止）、`clean-screenshots.sh`（`screenshots/` 只留最新一張 .png）；前三支列入 `.claude/settings.json` 的 `sandbox.excludedCommands` 與 `permissions.allow`，`permissions.allow` 另加入 E2E 用到的 Playwright 工具。說明見 `docs/DEVELOPMENT.md` §1.1。
@@ -40,6 +43,12 @@
 ### Removed
 
 - 訂單詳情頁的「付款成功／付款失敗」模擬付款按鈕（`PATCH /api/orders/:id/pay` API 保留，供開發與測試使用）。
+
+### Fixed
+
+- 綠界設定不再默默退回官方測試帳號（2026-11-19）：`ECPAY_ENV` 只接受 `staging`／`production`（`prod` 等拼錯不再被當成 staging）；`production` 缺 `ECPAY_MERCHANT_ID`／`ECPAY_HASH_KEY`／`ECPAY_HASH_IV` 或使用測試帳號時，`server.js` 啟動即結束；`staging` 只設部分金鑰視為錯誤，三個都不設才使用測試帳號。啟動時印出目前的綠界環境與特店編號。
+- `POST /api/ecpay/notify` 讀取綠界設定改在 `try` 內，設定錯誤時仍回 `1|OK`，不會因 async rejection 卡住請求（2026-11-19）。
+- 建立綠界付款改為先組參數再寫入 `ecpay_payments`，設定錯誤時不留下孤立的 pending 付款嘗試（2026-11-19）。
 
 ## [1.0.0] - 2026-04-07
 

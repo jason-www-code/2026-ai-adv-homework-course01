@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS ecpay_payments (
 - [x] `tests/ecpay.test.js`（18 個測試），全套 50 個測試通過
 - [x] 對綠界 stage 實測：建單參數被接受並顯示「選擇支付方式」頁；真實 QueryTradeInfo 回應通過 CheckMacValue 驗證，未付款訂單回 `TradeStatus=0` 並維持 pending
 - [x] 文件：FEATURES、ARCHITECTURE、DEVELOPMENT、TESTING、CHANGELOG、CLAUDE.md
-- [ ] 使用者在瀏覽器以測試卡完成一筆實際付款（3D 驗證需人工操作）
+- [x] 使用者在瀏覽器以測試卡完成一筆實際付款（3D 驗證需人工操作）
 
 ## 實作備註
 

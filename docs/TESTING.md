@@ -40,9 +40,9 @@ npx vitest                                       # watch 模式
 | `tests/orders.test.js` | 6 | `/api/orders`、`/api/orders/:id` | 從購物車建立訂單（status pending）、空車 400、未登入 401、列表、詳情、不存在 404 |
 | `tests/adminProducts.test.js` | 6 | `/api/admin/products` 全部 | 列表、新增、部分更新、刪除後公開 API 404、一般使用者 403、無 token 401 |
 | `tests/adminOrders.test.js` | 4 | `/api/admin/orders`、`/:id` | 列表、`status=pending` 篩選、詳情含 `user`、一般使用者 403 |
-| `tests/ecpay.test.js` | 18 | `ecpay/checkout`、`ecpay/verify`、`/api/ecpay/notify`、`POST /ecpay/result/:orderId`、`src/services/ecpay.js` | 官方 CheckMacValue 測試向量、竄改偵測、MerchantTradeNo 格式、UTC+8 日期、ItemName 消毒截斷、checkout 參數簽章與權限、verify 的 paid / pending / 金額不符 / CMV 錯誤 502 / 限速 429 / none、notify 回 `1\|OK`、導回 302 |
+| `tests/ecpay.test.js` | 27 | `ecpay/checkout`、`ecpay/verify`、`/api/ecpay/notify`、`POST /ecpay/result/:orderId`、`src/services/ecpay.js` | 官方 CheckMacValue 測試向量、竄改偵測、MerchantTradeNo 格式、UTC+8 日期、ItemName 消毒截斷、checkout 參數簽章與權限、verify 的 paid / pending / 金額不符 / CMV 錯誤 502 / 限速 429 / none、notify 回 `1\|OK`、導回 302；設定檢查（`vi.stubEnv`）：production 缺金鑰／空白／使用測試帳號、`ECPAY_ENV` 拼錯、staging 全不設退回測試帳號、只設部分，以及設定錯誤時 checkout／verify 回 503 `ECPAY_NOT_CONFIGURED`（不建立付款嘗試、不呼叫綠界）、notify 仍回 `1\|OK` |
 
-合計 50 個測試。**未涵蓋**：`PATCH /api/orders/:id/pay`、庫存不足（`STOCK_INSUFFICIENT`）、購物車累加、刪除有 pending 訂單的商品（409）、欄位驗證錯誤（`VALIDATION_ERROR`）、無效 token、`dualAuth` 無任何身分的 401。
+合計 59 個測試。**未涵蓋**：`PATCH /api/orders/:id/pay`、庫存不足（`STOCK_INSUFFICIENT`）、購物車累加、刪除有 pending 訂單的商品（409）、欄位驗證錯誤（`VALIDATION_ERROR`）、無效 token、`dualAuth` 無任何身分的 401。
 
 ## 4. 檔案內的依賴關係
 
@@ -160,7 +160,7 @@ describe('Order Payment API', () => {
 ## 7. 常見陷阱
 
 1. **測試寫入正式資料庫**：測試與開發伺服器共用 `<repo>/database.sqlite`，跑測試會留下測試使用者、訂單與商品異動。需要乾淨資料時，停止伺服器後刪除 `database.sqlite`、`database.sqlite-wal`、`database.sqlite-shm`。
-2. **庫存會被測試逐漸耗盡**：`orders.test.js` 與 `adminOrders.test.js` 每次各對 `products[0]` 下單 1 件，扣除的庫存不會回補，每跑一次全套測試該商品庫存就 −2。seed 商品庫存為 15–100，多次執行後可能出現 `STOCK_INSUFFICIENT`，導致 `orderId` 為 undefined、後續測試連鎖失敗。遇到時刪除資料庫重建。手動 E2E（[§8](#8-手動-e2eplaywright-mcp)）每跑一次也會讓所選商品庫存 −1。
+2. **庫存會被測試逐漸耗盡**：`orders.test.js` 與 `adminOrders.test.js` 每次各對 `products[0]` 下單 1 件，扣除的庫存不會回補，每跑一次全套測試該商品庫存就 −2；`ecpay.test.js` 另建立 10 筆訂單，每筆扣「第一個有庫存的商品」1 件。seed 商品庫存為 15–100，多次執行後可能出現 `STOCK_INSUFFICIENT`，導致 `orderId` 為 undefined、後續測試連鎖失敗。遇到時刪除資料庫重建。手動 E2E（[§8](#8-手動-e2eplaywright-mcp)）每跑一次也會讓所選商品庫存 −1。
 3. **`products[0]` 不固定**：列表依 `created_at DESC` 排序，seed 商品的時間相同，且 `adminProducts.test.js` 會新增後刪除商品；不要假設 `products[0]` 是特定商品或特定價格。
 4. **`sequence.files` 不會控制順序**：不要撰寫依賴其他檔案先執行的測試。
 5. **缺少 `.env`**：測試不會走 `server.js` 的 `JWT_SECRET` 檢查，而是在 `jwt.sign` 時拋錯並回 500，症狀是大量 `Cannot read properties of null (reading 'token')`。

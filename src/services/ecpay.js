@@ -12,22 +12,79 @@
  */
 const crypto = require('crypto');
 
+class EcpayError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
 const TEST_DEFAULTS = {
-  // 綠界官方公開測試帳號（AIO），正式環境必須以環境變數覆寫
+  // 綠界官方公開測試帳號（AIO），只允許在 staging 使用
   merchantId: '3002607',
   hashKey: 'pwFHCqoQZGmho4w6',
   hashIv: 'EkRm7iFT261dpevs'
 };
 
+const ECPAY_ENVS = ['staging', 'production'];
+
+const CREDENTIAL_ENV_VARS = {
+  merchantId: 'ECPAY_MERCHANT_ID',
+  hashKey: 'ECPAY_HASH_KEY',
+  hashIv: 'ECPAY_HASH_IV'
+};
+
+function configError(message) {
+  return new EcpayError('ECPAY_NOT_CONFIGURED', message);
+}
+
+/**
+ * 讀取並驗證綠界設定，設定錯誤時拋出 EcpayError('ECPAY_NOT_CONFIGURED')：
+ * - ECPAY_ENV 只接受 staging / production（未設定視為 staging），拼錯不會默默退回 staging
+ * - production：三個金鑰必填，且不可是官方測試帳號
+ * - staging：三個都沒設時使用官方測試帳號；只設一部分視為設定錯誤
+ * 錯誤訊息只列變數名稱，不含金鑰值。每次呼叫都重新讀 process.env（測試可用 vi.stubEnv）。
+ */
 function getConfig() {
-  const env = process.env.ECPAY_ENV || 'staging';
+  const env = (process.env.ECPAY_ENV || '').trim() || 'staging';
+  if (!ECPAY_ENVS.includes(env)) {
+    throw configError(`ECPAY_ENV 只能是 ${ECPAY_ENVS.join(' 或 ')}（目前為「${env}」）`);
+  }
   const isProduction = env === 'production';
+
+  const credentials = {};
+  const missing = [];
+  for (const [field, name] of Object.entries(CREDENTIAL_ENV_VARS)) {
+    const value = (process.env[name] || '').trim();
+    if (value) credentials[field] = value;
+    else missing.push(name);
+  }
+
+  let usingTestDefaults = false;
+  if (isProduction) {
+    if (missing.length > 0) {
+      throw configError(`ECPAY_ENV=production 時必須設定 ${missing.join('、')}`);
+    }
+    const testFields = Object.keys(CREDENTIAL_ENV_VARS).filter((f) => credentials[f] === TEST_DEFAULTS[f]);
+    if (testFields.length > 0) {
+      const names = testFields.map((f) => CREDENTIAL_ENV_VARS[f]).join('、');
+      throw configError(`ECPAY_ENV=production 不可使用綠界官方測試帳號（${names}）`);
+    }
+  } else if (missing.length === Object.keys(CREDENTIAL_ENV_VARS).length) {
+    Object.assign(credentials, TEST_DEFAULTS);
+    usingTestDefaults = true;
+  } else if (missing.length > 0) {
+    throw configError(
+      `缺少 ${missing.join('、')}：ECPay 金鑰需三個全部設定，或全部不設定改用綠界官方測試帳號`
+    );
+  }
+
   const host = isProduction ? 'https://payment.ecpay.com.tw' : 'https://payment-stage.ecpay.com.tw';
   return {
-    merchantId: process.env.ECPAY_MERCHANT_ID || TEST_DEFAULTS.merchantId,
-    hashKey: process.env.ECPAY_HASH_KEY || TEST_DEFAULTS.hashKey,
-    hashIv: process.env.ECPAY_HASH_IV || TEST_DEFAULTS.hashIv,
+    ...credentials,
+    env,
     isProduction,
+    usingTestDefaults,
     checkoutUrl: host + '/Cashier/AioCheckOut/V5',
     queryUrl: host + '/Cashier/QueryTradeInfo/V5',
     baseUrl: (process.env.BASE_URL || 'http://localhost:3001').replace(/\/+$/, '')
@@ -161,13 +218,6 @@ function buildCheckoutParams(order, items, merchantTradeNo, now = new Date()) {
 // ---------------------------------------------------------------------------
 // 查詢訂單 QueryTradeInfo/V5
 // ---------------------------------------------------------------------------
-
-class EcpayError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.code = code;
-  }
-}
 
 /**
  * 主動查詢交易狀態。

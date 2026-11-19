@@ -40,9 +40,10 @@ const router = express.Router();
  */
 router.post('/notify', async (req, res) => {
   const body = req.body || {};
-  const config = ecpay.getConfig();
 
   try {
+    // getConfig() 在設定錯誤時會拋錯，必須放在 try 內，否則 async handler 的 rejection 會讓請求卡住
+    const config = ecpay.getConfig();
     if (!ecpay.verifyCheckMacValue(body, config.hashKey, config.hashIv)) {
       console.error('[ECPay] notify CheckMacValue 驗證失敗');
     } else {

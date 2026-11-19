@@ -8,6 +8,13 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+// 綠界設定錯誤的詳細原因只寫 server log，不回給前端
+const ECPAY_NOT_CONFIGURED_RESPONSE = {
+  data: null,
+  error: 'ECPAY_NOT_CONFIGURED',
+  message: '付款服務設定未完成，暫時無法付款'
+};
+
 function generateOrderNo() {
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -457,6 +464,8 @@ router.patch('/:id/pay', (req, res) => {
  *         description: 訂單狀態不是 pending
  *       404:
  *         description: 訂單不存在
+ *       503:
+ *         description: 綠界設定錯誤，暫時無法付款（ECPAY_NOT_CONFIGURED）
  */
 router.post('/:id/ecpay/checkout', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.userId);
@@ -471,7 +480,14 @@ router.post('/:id/ecpay/checkout', (req, res) => {
     });
   }
 
-  const checkout = createPaymentAttempt(order);
+  let checkout;
+  try {
+    checkout = createPaymentAttempt(order);
+  } catch (err) {
+    if (err.code !== 'ECPAY_NOT_CONFIGURED') throw err;
+    console.error('[ECPay] checkout 設定錯誤:', err.message);
+    return res.status(503).json(ECPAY_NOT_CONFIGURED_RESPONSE);
+  }
   res.json({ data: checkout, error: null, message: '已建立綠界付款' });
 });
 
@@ -531,6 +547,8 @@ const VERIFY_MESSAGES = {
  *         description: 綠界查詢 API 限速（ECPAY_RATE_LIMITED）
  *       502:
  *         description: 綠界查詢失敗或回應驗證失敗（ECPAY_QUERY_FAILED）
+ *       503:
+ *         description: 綠界設定錯誤，暫時無法查詢（ECPAY_NOT_CONFIGURED）
  */
 router.post('/:id/ecpay/verify', async (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.userId);
@@ -543,6 +561,9 @@ router.post('/:id/ecpay/verify', async (req, res) => {
     result = await syncOrderPayments(order.id);
   } catch (err) {
     console.error('[ECPay] verify failed:', err.message);
+    if (err.code === 'ECPAY_NOT_CONFIGURED') {
+      return res.status(503).json(ECPAY_NOT_CONFIGURED_RESPONSE);
+    }
     const rateLimited = err.code === 'ECPAY_RATE_LIMITED';
     return res.status(rateLimited ? 429 : 502).json({
       data: null,

@@ -18,13 +18,15 @@ function createPaymentAttempt(order) {
     'SELECT product_name, product_price, quantity FROM order_items WHERE order_id = ?'
   ).all(order.id);
   const merchantTradeNo = ecpay.generateMerchantTradeNo();
+  // 先組參數（會驗證綠界設定），成功才寫入付款嘗試，設定錯誤時不留下孤立的 pending 紀錄
+  const checkout = ecpay.buildCheckoutParams(order, items, merchantTradeNo);
 
   db.prepare(
     `INSERT INTO ecpay_payments (id, order_id, merchant_trade_no, total_amount)
      VALUES (?, ?, ?, ?)`
   ).run(uuidv4(), order.id, merchantTradeNo, order.total_amount);
 
-  return ecpay.buildCheckoutParams(order, items, merchantTradeNo);
+  return checkout;
 }
 
 const markPaid = db.transaction((payment, result) => {

@@ -240,9 +240,24 @@
 - **付款方式固定 `ChoosePayment=Credit`**：ATM / 超商代碼 / 條碼為離線付款，官方規定只能等綠界通知，查詢 API 無法確認，本地架構不適用。
 - 每次「前往綠界付款」都建立一筆 `ecpay_payments`，產生新的 `MerchantTradeNo`（`FL` + 台灣時間 `yyMMddHHmmss` + 6 碼英數 = 20 字元；綠界要求永久唯一，重試必須換號）。
 
+### 設定檢查（`getConfig()`）
+
+避免正式環境默默使用官方測試帳號（設計見 [plans/archive/2026-11-19-ecpay-config-guard.md](./plans/archive/2026-11-19-ecpay-config-guard.md)）：
+
+| 情境 | 結果 |
+|---|---|
+| `ECPAY_ENV` 不是 `staging`／`production`（未設定視為 `staging`，大小寫敏感） | 設定錯誤 |
+| `production`，`ECPAY_MERCHANT_ID`／`ECPAY_HASH_KEY`／`ECPAY_HASH_IV` 缺任一（空字串、只有空白也算） | 設定錯誤，列出缺少的變數 |
+| `production`，任一值等於官方測試帳號 | 設定錯誤 |
+| `staging`，三個都沒設 | 使用官方測試帳號（`3002607`），啟動訊息會註明 |
+| `staging`，只設一部分 | 設定錯誤 |
+
+- 設定錯誤時 `server.js` 啟動即結束（`Fatal: <原因>`，只列變數名稱、不含金鑰值）。
+- 未經 `server.js` 啟動（例如測試直接用 `app.js`）時由 API 擋下：checkout 與 verify 回 `503 ECPAY_NOT_CONFIGURED`「付款服務設定未完成，暫時無法付款」（checkout 不會建立 `ecpay_payments`、verify 不會呼叫綠界）；notify 照常回 `1|OK`，原因寫進 log。
+
 ### 建立付款 `POST /api/orders/:id/ecpay/checkout`（authMiddleware）
 
-- 只能操作自己的訂單（否則 404 `NOT_FOUND`），且必須是 `pending`（否則 400 `INVALID_STATUS`）。
+- 只能操作自己的訂單（否則 404 `NOT_FOUND`），且必須是 `pending`（否則 400 `INVALID_STATUS`）；綠界設定錯誤時 503 `ECPAY_NOT_CONFIGURED`。
 - 回傳 `{ action, params }`：`action` 為 `https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5`（`ECPAY_ENV=production` 時為正式網域），`params` 為表單欄位（含 CheckMacValue）。
 - 主要參數：`TotalAmount`（訂單金額）、`ItemName`（`<名稱> x<數量>` 以 `#` 串接，已移除 HTML／控制字元／`#`，截斷至 200 字）、`TradeDesc=花漾生活訂單`、`MerchantTradeDate`（UTC+8）、`ReturnURL=${BASE_URL}/api/ecpay/notify`、`OrderResultURL=${BASE_URL}/ecpay/result/:orderId`、`ClientBackURL=${BASE_URL}/orders/:id?payment=return`、`CustomField1=訂單 id`。
 - 前端以隱藏 `<form>` 整頁 POST 到 `action`（綠界禁止 iframe）。
@@ -270,6 +285,7 @@
 | 訂單不存在或非本人 | 404 | `NOT_FOUND` |
 | 綠界回應 HTTP 403（呼叫太頻繁，需等 30 分鐘） | 429 | `ECPAY_RATE_LIMITED` |
 | 連線失敗、逾時（10 秒）、非 2xx、回應 CheckMacValue 驗證失敗 | 502 | `ECPAY_QUERY_FAILED` |
+| 綠界設定錯誤（見「設定檢查」） | 503 | `ECPAY_NOT_CONFIGURED` |
 
 > 官方提醒：信用卡付款後銀行可能延遲回覆，`TradeStatus` 會暫時為 `0`，請 10 分鐘後再查。
 

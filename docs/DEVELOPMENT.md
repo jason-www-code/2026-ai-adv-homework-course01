@@ -46,13 +46,14 @@ npm run dev:server          # http://localhost:3001
 | `ADMIN_PASSWORD` | seed 管理員密碼 | 選填 | `12345678` | `database.js` |
 | `NODE_ENV` | `test` 時 seed 管理員的 bcrypt rounds 降為 1 | 選填（Vitest 會自動設為 `test`） | — | `database.js` |
 | `BASE_URL` | 組綠界 ReturnURL / OrderResultURL / ClientBackURL 的對外網址 | 選填 | `http://localhost:3001` | `src/services/ecpay.js` |
-| `ECPAY_MERCHANT_ID` | 綠界特店編號 | 選填（正式環境必填） | `3002607`（官方公開測試帳號） | `src/services/ecpay.js` |
-| `ECPAY_HASH_KEY` | 綠界 HashKey | 選填（正式環境必填） | `pwFHCqoQZGmho4w6`（測試） | `src/services/ecpay.js` |
-| `ECPAY_HASH_IV` | 綠界 HashIV | 選填（正式環境必填） | `EkRm7iFT261dpevs`（測試） | `src/services/ecpay.js` |
-| `ECPAY_ENV` | `production` 使用正式網域，其他值使用 stage | 選填 | `staging` | `src/services/ecpay.js` |
+| `ECPAY_MERCHANT_ID` | 綠界特店編號 | `production` **必填**且不可為測試帳號；`staging` 三個金鑰需全設或全不設 | 三個都不設時用 `3002607`（官方公開測試帳號，僅 staging） | `src/services/ecpay.js` |
+| `ECPAY_HASH_KEY` | 綠界 HashKey | 同上 | 同上：`pwFHCqoQZGmho4w6`（測試） | `src/services/ecpay.js` |
+| `ECPAY_HASH_IV` | 綠界 HashIV | 同上 | 同上：`EkRm7iFT261dpevs`（測試） | `src/services/ecpay.js` |
+| `ECPAY_ENV` | `production` 使用正式網域，`staging` 使用 stage；**其他值（如 `prod`、`Production`）視為設定錯誤** | 選填 | `staging` | `src/services/ecpay.js` |
 
 > `ADMIN_EMAIL` / `ADMIN_PASSWORD` 只在該 Email 不存在時生效。既有資料庫中修改這兩個值不會更新原本的管理員。
 > 綠界 HashKey / HashIV 只能放在後端環境變數，不可出現在前端或版本控制（`.env.example` 內是官方公開測試值）。
+> 綠界設定錯誤（`ECPAY_ENV` 不是 `staging`／`production`、`production` 缺金鑰或仍是測試帳號、`staging` 只設一部分金鑰）時，`server.js` 啟動即印出 `Fatal: <原因>` 並結束；正常啟動時會印出 `[ECPay] 環境：…，特店 …`。規則見 [FEATURES.md §8.1](./FEATURES.md#81-綠界-ecpay-金流aio-信用卡主動查詢驗證)。
 > 若開發機需透過 HTTP 代理才能連外，Node 內建 `fetch` 預設不讀 `HTTPS_PROXY`，需設 `NODE_USE_ENV_PROXY=1`（Node 24+），否則查詢綠界會得到 `ECPAY_QUERY_FAILED`。
 > 測試輔助函式 `getAdminToken()` 寫死 `admin@hexschool.com` / `12345678`，若覆寫這兩個變數，測試需一併調整。
 

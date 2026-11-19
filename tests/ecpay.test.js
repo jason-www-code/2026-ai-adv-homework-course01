@@ -292,6 +292,150 @@ describe('ECPay notify (ReturnURL)', () => {
   });
 });
 
+describe('ECPay config', () => {
+  // 假的正式金鑰（非官方測試帳號），只用來驗證設定檢查，不會連線
+  const PROD_CREDENTIALS = {
+    ECPAY_MERCHANT_ID: '1234567',
+    ECPAY_HASH_KEY: 'prodHashKey12345',
+    ECPAY_HASH_IV: 'prodHashIv123456',
+  };
+  const MISCONFIGURED = {
+    ECPAY_ENV: 'production',
+    ECPAY_MERCHANT_ID: undefined,
+    ECPAY_HASH_KEY: undefined,
+    ECPAY_HASH_IV: undefined,
+  };
+
+  /** 一次設定四個 ECPay 變數；值為 undefined 代表未設定 */
+  function stubEcpayEnv(vars) {
+    for (const name of ['ECPAY_ENV', 'ECPAY_MERCHANT_ID', 'ECPAY_HASH_KEY', 'ECPAY_HASH_IV']) {
+      vi.stubEnv(name, vars[name]);
+    }
+  }
+
+  function getConfigError() {
+    try {
+      ecpay.getConfig();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ecpay.EcpayError);
+      expect(err.code).toBe('ECPAY_NOT_CONFIGURED');
+      return err;
+    }
+    throw new Error('getConfig() 應該拋出 ECPAY_NOT_CONFIGURED');
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('should reject production when a credential is missing or blank', () => {
+    stubEcpayEnv({ ECPAY_ENV: 'production', ...PROD_CREDENTIALS, ECPAY_HASH_KEY: undefined });
+    const missing = getConfigError();
+    expect(missing.message).toContain('ECPAY_HASH_KEY');
+    expect(missing.message).not.toContain(PROD_CREDENTIALS.ECPAY_HASH_IV);
+
+    stubEcpayEnv({ ECPAY_ENV: 'production', ...PROD_CREDENTIALS, ECPAY_HASH_IV: '   ' });
+    expect(getConfigError().message).toContain('ECPAY_HASH_IV');
+  });
+
+  it('should reject the official test account in production', () => {
+    stubEcpayEnv({
+      ECPAY_ENV: 'production',
+      ECPAY_MERCHANT_ID: '3002607',
+      ECPAY_HASH_KEY: 'pwFHCqoQZGmho4w6',
+      ECPAY_HASH_IV: 'EkRm7iFT261dpevs',
+    });
+    expect(getConfigError().message).toMatch(/測試帳號/);
+  });
+
+  it('should accept production credentials and use production endpoints', () => {
+    stubEcpayEnv({ ECPAY_ENV: 'production', ...PROD_CREDENTIALS });
+    const config = ecpay.getConfig();
+    expect(config).toMatchObject({
+      env: 'production',
+      isProduction: true,
+      usingTestDefaults: false,
+      merchantId: '1234567',
+      hashKey: 'prodHashKey12345',
+      hashIv: 'prodHashIv123456',
+      checkoutUrl: 'https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5',
+      queryUrl: 'https://payment.ecpay.com.tw/Cashier/QueryTradeInfo/V5',
+    });
+  });
+
+  it('should reject an unknown ECPAY_ENV instead of falling back to staging', () => {
+    stubEcpayEnv({ ECPAY_ENV: 'prod', ...PROD_CREDENTIALS });
+    expect(getConfigError().message).toContain('ECPAY_ENV');
+
+    stubEcpayEnv({ ECPAY_ENV: 'Production', ...PROD_CREDENTIALS });
+    getConfigError();
+  });
+
+  it('should fall back to the official test account in staging when nothing is set', () => {
+    stubEcpayEnv({});
+    const config = ecpay.getConfig();
+    expect(config).toMatchObject({
+      env: 'staging',
+      isProduction: false,
+      usingTestDefaults: true,
+      merchantId: '3002607',
+      hashKey: 'pwFHCqoQZGmho4w6',
+      hashIv: 'EkRm7iFT261dpevs',
+      checkoutUrl: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5',
+    });
+  });
+
+  it('should reject partial credentials in staging', () => {
+    stubEcpayEnv({ ECPAY_ENV: 'staging', ECPAY_MERCHANT_ID: '1234567' });
+    const err = getConfigError();
+    expect(err.message).toContain('ECPAY_HASH_KEY');
+    expect(err.message).toContain('ECPAY_HASH_IV');
+  });
+
+  it('checkout should return 503 without creating a payment attempt when misconfigured', async () => {
+    const { token, order } = await createPendingOrder();
+    stubEcpayEnv(MISCONFIGURED);
+
+    const res = await request(app).post(`/api/orders/${order.id}/ecpay/checkout`).set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(503);
+    expect(res.body).toHaveProperty('data', null);
+    expect(res.body).toHaveProperty('error', 'ECPAY_NOT_CONFIGURED');
+    expect(res.body.message).toBeTruthy();
+    expect(res.body.message).not.toMatch(/ECPAY_/);
+    const { count } = db.prepare('SELECT COUNT(*) AS count FROM ecpay_payments WHERE order_id = ?').get(order.id);
+    expect(count).toBe(0);
+  });
+
+  it('verify should return 503 without calling ECPay when misconfigured', async () => {
+    const { token, order } = await createPendingOrder();
+    await request(app).post(`/api/orders/${order.id}/ecpay/checkout`).set('Authorization', `Bearer ${token}`);
+    stubEcpayEnv(MISCONFIGURED);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await request(app).post(`/api/orders/${order.id}/ecpay/verify`).set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(503);
+    expect(res.body).toHaveProperty('data', null);
+    expect(res.body).toHaveProperty('error', 'ECPAY_NOT_CONFIGURED');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('notify should still respond 1|OK when misconfigured', async () => {
+    stubEcpayEnv(MISCONFIGURED);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await request(app).post('/api/ecpay/notify').type('form').send({ MerchantTradeNo: 'FAKE', RtnCode: '1', CheckMacValue: 'BAD' });
+
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('1|OK');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('ECPay OrderResultURL page route', () => {
   it('should redirect back to order detail page', async () => {
     const res = await request(app).post('/ecpay/result/abc-123').type('form').send({ RtnCode: '1' });

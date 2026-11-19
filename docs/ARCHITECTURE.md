@@ -116,8 +116,10 @@
    - `seedProducts()`：若 `products` 表為空，以 transaction 寫入 8 筆花卉商品（圖片為本機 `/images/products/*.jpg`）。
    - `upgradeSeedProductImages()`：把名稱相符、且 `image_url` 仍是舊 seed Unsplash 網址的商品改為本機圖片；管理員改過的圖片不動。
 4. `app.js` 設定 view engine、靜態檔、CORS、body parser、`sessionMiddleware`，掛載 API 與頁面路由、404、`errorHandler`。
-5. 回到 `server.js`：只有在 `require.main === module`（直接執行）時才檢查 `JWT_SECRET` 並 `listen(PORT)`。被測試 `require` 時不會 listen。
+5. 回到 `server.js`：只有在 `require.main === module`（直接執行）時才檢查 `JWT_SECRET`、呼叫 `ecpay.getConfig()` 檢查綠界設定（錯誤時 `Fatal: <原因>` 並結束，成功時印出 `[ECPay] 環境：…，特店 …`），然後 `listen(PORT)`。被測試 `require` 時不會 listen。
 
+> 綠界設定的啟動檢查同樣只在 `server.js`；未經 `server.js` 時由 checkout／verify 回 `503 ECPAY_NOT_CONFIGURED` 擋下（見 [FEATURES.md §8.1](./FEATURES.md#81-綠界-ecpay-金流aio-信用卡主動查詢驗證)）。
+>
 > `JWT_SECRET` 檢查只存在於 `server.js`。測試直接用 `app.js`，若 `.env` 中沒有 `JWT_SECRET`，`jwt.sign` 會拋錯導致註冊/登入回傳 500。
 
 ### Middleware 順序（app.js）
@@ -245,6 +247,7 @@
 | `INVALID_STATUS` | 400 | 對非 `pending` 訂單呼叫付款或建立綠界付款 |
 | `ECPAY_RATE_LIMITED` | 429 | 綠界查詢 API 回 403（呼叫太頻繁） |
 | `ECPAY_QUERY_FAILED` | 502 | 綠界查詢連線失敗、逾時、非 2xx 或回應 CheckMacValue 驗證失敗 |
+| `ECPAY_NOT_CONFIGURED` | 503 | 綠界設定錯誤（`ECPAY_ENV` 不合法、正式環境缺金鑰或使用測試帳號），checkout／verify 回傳 |
 | `INTERNAL_ERROR` | 任何 | `errorHandler` 統一使用此代碼（**不論實際狀態碼**） |
 
 ### errorHandler 行為
@@ -471,7 +474,7 @@ users 1 ──< orders 1 ──< order_items ··· products（僅邏輯關聯�
 | URL encode | `ecpayUrlEncode`：`encodeURIComponent` → `%20→+`、`~→%7e`、`'→%27` → 轉小寫 → .NET 字元還原（**不可**與 AES 服務的 encode 混用） |
 | 比對 | `crypto.timingSafeEqual`，禁止 `==` |
 | 付款方式 | 固定 `ChoosePayment=Credit`（ATM/CVS/BARCODE 需等 Server Notify，本地不適用） |
-| 環境 | `ECPAY_ENV=staging` → `payment-stage.ecpay.com.tw`；`production` → `payment.ecpay.com.tw` |
+| 環境 | `ECPAY_ENV=staging` → `payment-stage.ecpay.com.tw`；`production` → `payment.ecpay.com.tw`；其他值視為設定錯誤。`production` 必須設定自己的三個金鑰（不可為測試帳號），否則 `server.js` 不啟動 |
 | 限速 | 查詢太頻繁回 HTTP 403，需等 30 分鐘；verify 每次最多查 5 筆付款嘗試，前端只在導回時自動查一次 |
 | ReturnURL | `/api/ecpay/notify` 已實作（驗證 CMV → 再查詢一次 → 回 `1\|OK`），`BASE_URL` 設為公開網址時才會收到 |
 | 已驗證 | 2026-11-11 對 stage 實測：建單參數被接受並顯示付款頁（含 `:3001` 的 OrderResultURL / ClientBackURL）；真實 QueryTradeInfo 回應 CheckMacValue 驗證通過 |
