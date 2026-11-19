@@ -3,15 +3,37 @@
 ## 1. 開發環境
 
 ```bash
+nvm use                     # 依 .nvmrc 切到 Node v24.22.2
 npm install
 cp .env.example .env        # 並把 JWT_SECRET 改成隨機字串
 npm run css:build           # 或在另一個終端機執行 npm run dev:css
 npm run dev:server          # http://localhost:3001
 ```
 
+- Node 版本以專案根目錄的 `.nvmrc`（`v24.22.2`）為準（`package.json` 沒有 `engines`）。`better-sqlite3` 是原生模組，`npm install` 時取得的是對應當下 Node 版本的二進位檔；之後換了 Node 版本再啟動，會出現 `NODE_MODULE_VERSION` 不符的錯誤，需切回 `.nvmrc` 的版本，或在新版本下執行 `npm rebuild better-sqlite3`。
 - 沒有 nodemon，修改後端程式需手動重啟 `dev:server`。
 - 前端 JS 與 EJS 不需建置，重新整理即可（EJS 在非 production 模式不快取）。
 - 新增 Tailwind class 後若未執行 `dev:css`，樣式不會出現在 `output.css`。
+
+### 1.1 Claude Code 沙箱與輔助腳本（`scripts/`）
+
+專案的 `.claude/settings.json` 開啟了 Claude Code 的 sandbox（`sandbox.enabled: true`）。沙箱內每條 Bash 指令各自有獨立的網路與行程視野，因此：在沙箱內啟動的伺服器，瀏覽器與後續指令都連不到；沙箱內的 `curl` 連不到沙箱外的伺服器；`lsof` 也看不到沙箱外的行程。為了讓 Claude Code 能啟動、檢查、停止開發伺服器，`scripts/` 提供下列腳本：
+
+| 腳本 | 作用 | 參數（環境變數） | 執行位置 |
+|---|---|---|---|
+| `./scripts/dev-server.sh` | `source ~/.nvm/nvm.sh` → `nvm use`（讀 `.nvmrc`）→ `exec node server.js`。前景執行，不會自行結束 | 埠號沿用 `.env` 的 `PORT`（未設為 3001） | 沙箱外 |
+| `./scripts/health-check.sh` | 每秒以 `curl` 請求 `http://localhost:$PORT/`，回 HTTP 200 時印 `server up` 並以 0 結束；逾時印錯誤並以 1 結束 | `PORT`（預設 3001）、`TIMEOUT`（秒，預設 15） | 沙箱外 |
+| `./scripts/stop-server.sh` | 以 `lsof -ti tcp:$PORT -sTCP:LISTEN` 找出監聽該埠的行程並 `kill`；沒有行程時印「port … 沒有行程在監聽」並以 0 結束 | `PORT`（預設 3001） | 沙箱外 |
+| `./scripts/clean-screenshots.sh` | 在 `screenshots/` 只保留修改時間最新的一張 `.png`，刪除其他一般檔案（Playwright 的 snapshot `.yml`、console `.log`、舊截圖），不碰子目錄；沒有任何 .png 時不刪檔並以 1 結束 | — | 沙箱內即可 |
+
+使用規則：
+
+- 前三個腳本同時列在 `.claude/settings.json` 的 `sandbox.excludedCommands`（在沙箱外執行）與 `permissions.allow`（不跳權限提示）。**只有整條指令與清單完全相符才會生效**，所以必須單獨執行：不可加 `cd … &&`、環境變數前綴（`TIMEOUT=2 ./scripts/…`）、`;`、`&&`、`( … )` 或 `&`。不相符時腳本會在沙箱內執行，而且**看起來像成功**（例如 `stop-server.sh` 回報沒有行程在監聽，伺服器其實還在跑；`dev-server.sh` 找不到 nvm）。
+- 也因為不能加前綴，在 Claude Code 中 `health-check.sh`、`stop-server.sh` 一律使用預設埠 3001，不會讀 `.env`；若把 `.env` 的 `PORT` 改成其他值，這兩支腳本會找錯埠。在一般終端機手動執行時則可用 `PORT=4000 ./scripts/health-check.sh`。
+- 在 Claude Code 中啟動伺服器：以 Bash 的背景執行（`run_in_background`）跑 `./scripts/dev-server.sh`，再執行 `./scripts/health-check.sh` 確認就緒。
+- 停止伺服器一律用 `./scripts/stop-server.sh`（依埠號判斷），不要用 `pkill -f node` 之類的行程名稱比對，會比對到執行指令的 shell 本身。需要安裝 `lsof`。
+- `dev-server.sh` 假設 nvm 安裝在 `~/.nvm`，沒有 nvm 時會直接失敗；在一般終端機可自行切好 Node 版本後改用 `npm run dev:server`（在 Claude Code 沙箱內這樣啟動的伺服器，瀏覽器連不到）。
+- 這三個腳本在沙箱外執行，等同繞過沙箱保護：修改時保持最小，並經過 code review（腳本開頭的註解也有標註）。新增需要在沙箱外執行的腳本時，要同時加進 `excludedCommands` 與 `permissions.allow`。
 
 ## 2. 環境變數
 
@@ -223,7 +245,7 @@ router.patch('/:id/pay', (req, res) => { ... });
 - 所有 API 呼叫使用 `apiFetch(url, { method, body: JSON.stringify(...) })`；它會自動加上 `Content-Type`、`Authorization`、`X-Session-Id`。
 - `apiFetch` 遇到 401 會清除登入資訊並跳轉 `/login`，並回傳 `undefined`；呼叫端在 401 情境下拿不到錯誤物件。
 - 非 2xx 時拋出 `{ status, data }`，可用 `err?.data?.message` 顯示後端訊息。
-- 視覺依「夜色花房」設計稿（`design/flower-life/flower-life.pen`，規格見 [plans/archive/2026-11-19-pencil-redesign.md](./plans/archive/2026-11-19-pencil-redesign.md)）。色彩只用 `input.css` `@theme` 的 token，不要寫死色碼：
+- 視覺依「夜色花房」設計稿（`docs/design/flower-life/flower-life.pen`，規格見 [plans/archive/2026-11-19-pencil-redesign.md](./plans/archive/2026-11-19-pencil-redesign.md)）。色彩只用 `input.css` `@theme` 的 token，不要寫死色碼：
 
   | 用途 | token |
   |---|---|

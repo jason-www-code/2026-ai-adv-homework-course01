@@ -19,6 +19,7 @@
 | 訪客購物車合併至會員 | ⬜ | — | — | — |
 | 後台修改訂單狀態 | ⬜ | — | — | — |
 | OpenAPI 文件產生 | ✅ | `npm run openapi` | — | — |
+| 端對端購物流程 E2E（Playwright MCP skill） | ✅（手動執行） | 經由頁面呼叫 auth、cart、orders、ecpay API | `/` → `/cart` → `/login` → `/checkout` → `/orders/:id` → 綠界 stage | `/playwright-e2e-test`，說明見 [TESTING.md §8](./TESTING.md#8-手動-e2eplaywright-mcp) |
 
 ---
 

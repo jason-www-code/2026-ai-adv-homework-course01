@@ -4,7 +4,19 @@
     "defaultMode": "acceptEdits",
     "allow": [
       "Edit(~/.npm/**)",
-      "Read(~/.npm/**)"
+      "Read(~/.npm/**)",
+      "Bash(./scripts/dev-server.sh)",
+      "Bash(./scripts/stop-server.sh)",
+      "Bash(./scripts/health-check.sh)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_tabs",
+      "mcp__playwright__browser_close"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -16,6 +28,11 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
+    "excludedCommands": [
+      "./scripts/dev-server.sh",
+      "./scripts/stop-server.sh",
+      "./scripts/health-check.sh"
+    ],
     "network": {
       "allowLocalBinding": true,
       "allowedDomains": [

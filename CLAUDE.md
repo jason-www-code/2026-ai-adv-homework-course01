@@ -11,6 +11,11 @@
 ```bash
 cp .env.example .env                 # 必須設定 JWT_SECRET（server.js 缺少時直接結束；測試缺少時註冊/登入回 500）
 npm start                            # 建置壓縮版 CSS 後啟動，PORT 預設 3001
+./scripts/dev-server.sh              # 啟動伺服器的建議方式：已在 sandbox 白名單（excludedCommands），並依 .nvmrc 切 Node 版本（better-sqlite3 需相符）
+./scripts/health-check.sh            # 等伺服器回 HTTP 200（沙箱內 curl 連不到沙箱外的伺服器，需用此腳本；同樣在 excludedCommands）
+./scripts/stop-server.sh             # 依埠號停止伺服器（不要用 pkill，會比對到自己的 shell）
+./scripts/clean-screenshots.sh       # E2E 後清理 screenshots/，只留最新一張 .png
+/playwright-e2e-test                 # Claude Code skill：Playwright MCP 跑購物→註冊→結帳→綠界付款 E2E（寫入正式 DB），截圖留在 screenshots/
 npm run dev:server                   # 只啟動伺服器（無 hot reload，改後端需重啟）
 npm run dev:css                      # Tailwind watch：public/css/input.css -> public/css/output.css
 npm run css:build                    # 建置壓縮版 CSS

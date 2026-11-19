@@ -3,7 +3,7 @@
 ## 1. 技術與設定
 
 - **Vitest 2**（`vitest run`）+ **supertest**：直接對 `app.js` 匯出的 Express app 發送 HTTP 請求，不需啟動伺服器。
-- 所有測試都是 **API 整合測試**，打到真實的 SQLite 資料庫，沒有 mock，也沒有前端/E2E 測試。
+- 自動化測試都是 **API 整合測試**，打到真實的 SQLite 資料庫，沒有 mock，也沒有自動化的前端/E2E 測試；瀏覽器端對端流程改由 Claude Code skill 手動執行（見 [§8](#8-手動-e2eplaywright-mcp)）。
 - `vitest.config.js`：
 
 | 設定 | 值 | 影響 |
@@ -160,7 +160,7 @@ describe('Order Payment API', () => {
 ## 7. 常見陷阱
 
 1. **測試寫入正式資料庫**：測試與開發伺服器共用 `<repo>/database.sqlite`，跑測試會留下測試使用者、訂單與商品異動。需要乾淨資料時，停止伺服器後刪除 `database.sqlite`、`database.sqlite-wal`、`database.sqlite-shm`。
-2. **庫存會被測試逐漸耗盡**：`orders.test.js` 與 `adminOrders.test.js` 每次各對 `products[0]` 下單 1 件，扣除的庫存不會回補，每跑一次全套測試該商品庫存就 −2。seed 商品庫存為 15–100，多次執行後可能出現 `STOCK_INSUFFICIENT`，導致 `orderId` 為 undefined、後續測試連鎖失敗。遇到時刪除資料庫重建。
+2. **庫存會被測試逐漸耗盡**：`orders.test.js` 與 `adminOrders.test.js` 每次各對 `products[0]` 下單 1 件，扣除的庫存不會回補，每跑一次全套測試該商品庫存就 −2。seed 商品庫存為 15–100，多次執行後可能出現 `STOCK_INSUFFICIENT`，導致 `orderId` 為 undefined、後續測試連鎖失敗。遇到時刪除資料庫重建。手動 E2E（[§8](#8-手動-e2eplaywright-mcp)）每跑一次也會讓所選商品庫存 −1。
 3. **`products[0]` 不固定**：列表依 `created_at DESC` 排序，seed 商品的時間相同，且 `adminProducts.test.js` 會新增後刪除商品；不要假設 `products[0]` 是特定商品或特定價格。
 4. **`sequence.files` 不會控制順序**：不要撰寫依賴其他檔案先執行的測試。
 5. **缺少 `.env`**：測試不會走 `server.js` 的 `JWT_SECRET` 檢查，而是在 `jwt.sign` 時拋錯並回 500，症狀是大量 `Cannot read properties of null (reading 'token')`。
@@ -169,3 +169,31 @@ describe('Order Payment API', () => {
 8. **刪除商品前確認購物車**：在測試中刪除曾被加入購物車的商品會因外鍵約束得到 500。
 9. **不可連綠界外網**：會呼叫綠界的測試必須用 `vi.stubGlobal('fetch', vi.fn(...))` 模擬 `QueryTradeInfo/V5` 回應（用 `ecpay.generateCheckMacValue` 產生合法簽章），並在 `afterEach` 呼叫 `vi.unstubAllGlobals()`。真實綠界 stage 的驗證屬於手動測試。
 10. **CheckMacValue 測試向量**：`.claude/skills/ecpay/test-vectors/checkmacvalue.json` 中只有含 `params` 的 SHA256 向量適用 AIO；ECTicket 向量（`formula: ecticket`）公式不同，需排除。
+
+## 8. 手動 E2E（Playwright MCP）
+
+瀏覽器端對端流程封裝為專案 skill `.claude/skills/playwright-e2e-test/`，在 Claude Code 輸入 `/playwright-e2e-test [商品名稱]`，或直接要求「跑 E2E／測結帳付款流程」即可執行。skill 預設以 Sonnet、high effort 執行，瀏覽器由專案 `.mcp.json` 的 Playwright MCP 設定決定（`--isolated`，不保留資料；未指定 `--browser` 時用 Chrome）。
+
+流程：首頁加入第一個有庫存的商品 → `/cart` 前往結帳 → 註冊新會員 `e2e-<時間戳>@example.com` →（訪客購物車不合併，以會員身分重新加入商品）→ `/checkout` 送出訂單 → 綠界 stage 信用卡付款（卡號 `4311-9522-2222-2222`、3D 驗證碼 `1234`）→ 訂單頁顯示「已付款」。綠界付款頁的操作細節見 skill 內的 `references/ecpay-stage.md`。
+
+注意：
+
+- **會寫入正式 `database.sqlite`**：每跑一次多一個測試使用者與一筆已付款訂單，該商品庫存 −1；也會連線綠界測試環境。
+- 伺服器沒在跑時，skill 會自行以 `./scripts/dev-server.sh` 啟動，結束時再以 `./scripts/stop-server.sh` 停止；原本就在跑的伺服器不會被停掉。
+- `./scripts/*.sh` 必須單獨當成整條指令執行（不可串接 `&&`、`;` 或加環境變數前綴），否則不符合 sandbox `excludedCommands`，會在沙箱內執行而失效。
+- 結束時以 `./scripts/clean-screenshots.sh` 清理，`screenshots/` 只留一張 `playwright-e2e-<時間戳>.png`（`screenshots/` 已在 `.gitignore`）。
+
+前置條件：
+
+- `.env` 已設定 `JWT_SECRET`（伺服器由 `server.js` 啟動，缺少時直接結束）。
+- 第一次使用時，Claude Code 會詢問是否啟用 `.mcp.json` 中的 `playwright` MCP server，需同意。它以 `npx @playwright/mcp@latest` 啟動（未鎖定版本、不在 `package.json`，第一次需要網路下載）。
+- 本機需安裝 Chrome。要改用 Edge，在 `.mcp.json` 的 `args` 加上 `"--browser", "msedge"` 後重啟 Claude Code。
+- `.claude/settings.json` 的 `permissions.allow` 已預先允許 skill 用到的 Playwright 工具與伺服器腳本，執行過程不會逐一跳權限提示；腳本為何要在沙箱外執行見 [DEVELOPMENT.md §1.1](./DEVELOPMENT.md#11-claude-code-沙箱與輔助腳本scripts)。
+
+執行細節與限制：
+
+- 綠界查詢太頻繁會回 HTTP 403（需等 30 分鐘），因此導回訂單頁後若仍顯示待付款，skill 最多只按一次「重新查詢付款結果」，之後照實回報，不會一直重試。
+- 所有商品都售完時 skill 會停止，不會自行刪除資料庫；需停止伺服器後執行 `rm database.sqlite*` 重建。
+- 截圖檔名必須寫成 `screenshots/<name>.png`：`browser_take_screenshot` 的 `filename` 相對於專案根目錄，不是 `.mcp.json` 的 `--output-dir`，只寫檔名會存到專案根目錄。
+- 綠界付款頁的操作細節（卡號四段必須逐字輸入、持卡人姓名只能用英文字母、測試環境提示框會擋住第一次「立即付款」）記錄在 `references/ecpay-stage.md`；綠界頁面改版時更新該檔。
+- 設計與實測紀錄見已歸檔計畫 [plans/archive/2026-11-19-playwright-e2e-skill.md](./plans/archive/2026-11-19-playwright-e2e-skill.md)。

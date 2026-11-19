@@ -36,7 +36,23 @@
 ├── vitest.config.js          # Vitest 設定（globals、不平行執行檔案、hookTimeout）
 ├── package.json
 ├── .env.example              # 環境變數範本
+├── .nvmrc                    # Node 版本（v24.22.2）；better-sqlite3 是原生模組，需與執行時的 Node 版本相符
+├── .mcp.json                 # 專案層級 MCP 設定：Playwright MCP（`--isolated`、`--output-dir ./screenshots`），供手動 E2E 使用
 ├── database.sqlite           # 執行時自動產生（gitignore），另有 -wal / -shm 檔
+├── screenshots/              # Playwright E2E 的截圖輸出（gitignore），跑完只保留一張 .png
+│
+├── .claude/
+│   ├── settings.json         # Claude Code 專案設定：權限白名單、sandbox（excludedCommands 列出 scripts/ 中的伺服器腳本）
+│   └── skills/
+│       ├── playwright-e2e-test/  # 手動 E2E skill：SKILL.md 流程 + references/ecpay-stage.md 綠界付款頁操作（見 TESTING.md §8）
+│       ├── git-commit/           # 撰寫 commit 訊息的 skill
+│       └── ecpay/                # 綠界官方 skill，需自行 git clone，授權不允許重新散布，不可 commit（見 README.md）
+│
+├── scripts/                  # Claude Code 沙箱環境用的輔助腳本（見 DEVELOPMENT.md §1.1）
+│   ├── dev-server.sh         # 依 .nvmrc 切換 Node 後啟動 server.js（沙箱外執行）
+│   ├── health-check.sh       # 輪詢 http://localhost:$PORT/ 直到回 200（沙箱外執行）
+│   ├── stop-server.sh        # 以 lsof 依埠號停止伺服器（沙箱外執行）
+│   └── clean-screenshots.sh  # 清理 screenshots/，只留最新一張 .png
 │
 ├── src/
 │   ├── database.js           # 開啟 SQLite、設定 pragma、建表、seed，匯出單例 db
@@ -80,9 +96,10 @@
 │       ├── header-init.js    # 前台 header：依 data-auth 切換登入狀態、行動版選單、全域 CartBadge（購物車徽章）
 │       └── pages/*.js        # 各頁面的 Vue app（檔名 = pageScript）
 │
-├── design/flower-life/       # Pencil 設計稿 flower-life.pen（夜色花房，需用 Pencil 開啟）與 Pencil 產生的圖片 images/
 ├── tests/                    # Vitest + supertest 整合測試（見 TESTING.md）
-└── docs/                     # 專案文件
+└── docs/                     # 專案文件（README、ARCHITECTURE、DEVELOPMENT、FEATURES、TESTING、CHANGELOG）
+    ├── plans/                # 進行中的開發計畫；完成後移至 plans/archive/
+    └── design/flower-life/   # Pencil 設計稿 flower-life.pen（夜色花房，需用 Pencil 開啟）與 Pencil 產生的圖片 images/（兩者需放在同一層）
 ```
 
 ---

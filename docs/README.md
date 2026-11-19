@@ -6,7 +6,7 @@
 
 | 層級 | 技術 | 版本（package.json） |
 |---|---|---|
-| Runtime | Node.js（CommonJS） | — |
+| Runtime | Node.js（CommonJS） | `v24.22.2`（`.nvmrc`；`package.json` 未設 `engines`） |
 | Web 框架 | Express | `~4.16.1` |
 | 資料庫 | SQLite via better-sqlite3（同步 API、WAL） | `^12.8.0` |
 | 認證 | jsonwebtoken（HS256，7 天）、bcrypt | `^9.0.2`、`^6.0.0` |
@@ -16,6 +16,7 @@
 | API 文件 | swagger-jsdoc（OpenAPI 3.0.3） | `^6.2.8` |
 | 金流 | 綠界 ECPay 全方位金流 AIO（CheckMacValue SHA256，信用卡；以 Node 內建 `fetch` 呼叫查詢 API，無額外套件） | — |
 | 測試 | Vitest + supertest | `^2.1.9`、`^7.2.2` |
+| 手動 E2E | Playwright MCP（`.mcp.json` 以 `npx @playwright/mcp@latest` 啟動，Claude Code skill `playwright-e2e-test` 驅動） | 未鎖定（`@latest`，不在 `package.json`） |
 | 其他 | cors、dotenv、uuid | |
 
 ## 快速開始
@@ -23,6 +24,7 @@
 ```bash
 git clone <repo-url>
 cd 2026-ai-adv-homework-course01
+nvm use        # 依 .nvmrc 切到 Node v24.22.2
 npm install
 cp .env.example .env
 # 編輯 .env，把 JWT_SECRET 改成隨機字串，例如：
@@ -31,6 +33,8 @@ npm start
 ```
 
 開啟 <http://localhost:3001>。
+
+> `better-sqlite3` 是原生模組，安裝與執行必須用同一個 Node 版本；換過版本後啟動出現 `NODE_MODULE_VERSION` 錯誤時，切回 `.nvmrc` 的版本或執行 `npm rebuild better-sqlite3`。在 Claude Code 中請用 `./scripts/dev-server.sh` 啟動伺服器（原因見 [DEVELOPMENT.md §1.1](./DEVELOPMENT.md#11-claude-code-沙箱與輔助腳本scripts)）。
 
 ### 安裝綠界 ECPay skill（選用，建議）
 
@@ -78,6 +82,11 @@ npm run dev:server   # 伺服器（修改後端需手動重啟）
 | `npx vitest run tests/<file>.test.js -t "<名稱>"` | 執行名稱符合的測試 |
 | `npm run openapi` | 產生 `openapi.json` |
 | `rm database.sqlite*` | 重置資料庫（停止伺服器後執行，下次啟動重新 seed） |
+| `./scripts/dev-server.sh` | 依 `.nvmrc` 切換 Node 後啟動伺服器；Claude Code 沙箱中的建議啟動方式（見 [DEVELOPMENT.md §1.1](./DEVELOPMENT.md#11-claude-code-沙箱與輔助腳本scripts)） |
+| `./scripts/health-check.sh` | 等待伺服器回 HTTP 200（預設最多 15 秒） |
+| `./scripts/stop-server.sh` | 依埠號（預設 3001）停止伺服器 |
+| `./scripts/clean-screenshots.sh` | 清理 `screenshots/`，只留最新一張 .png |
+| `/playwright-e2e-test [商品名稱]` | Claude Code skill：用 Playwright MCP 跑購物 → 註冊 → 結帳 → 綠界付款的手動 E2E（寫入正式資料庫，見 [TESTING.md §8](./TESTING.md#8-手動-e2eplaywright-mcp)） |
 
 ## 文件索引
 
@@ -85,9 +94,9 @@ npm run dev:server   # 伺服器（修改後端需手動重啟）
 |---|---|
 | [README.md](./README.md) | 專案介紹、技術棧、快速開始、常用指令 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 目錄結構、啟動流程、API 路由總覽、回應格式、認證授權、資料庫 schema、資料流、金流 |
-| [DEVELOPMENT.md](./DEVELOPMENT.md) | 環境變數、模組系統、命名規則、新增 API/middleware/資料表/頁面的步驟、JSDoc 格式、計畫歸檔流程 |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | Node 版本、Claude Code 沙箱與 `scripts/`、環境變數、模組系統、命名規則、新增 API/middleware/資料表/頁面的步驟、JSDoc 格式、計畫歸檔流程 |
 | [FEATURES.md](./FEATURES.md) | 各功能的完成狀態、行為描述、參數、業務邏輯、錯誤情境與已知問題 |
-| [TESTING.md](./TESTING.md) | 測試檔案、依賴關係、輔助函式、撰寫範例、常見陷阱 |
+| [TESTING.md](./TESTING.md) | 測試檔案、依賴關係、輔助函式、撰寫範例、常見陷阱、手動 E2E（Playwright MCP） |
 | [CHANGELOG.md](./CHANGELOG.md) | 更新日誌 |
-| [plans/](./plans/) | 進行中的開發計畫；完成後移至 [plans/archive/](./plans/archive/)（已歸檔：[2026-11-11 綠界 AIO 金流串接](./plans/archive/2026-11-11-ecpay-aio-integration.md)、[2026-11-19 全站重新設計設計稿](./plans/archive/2026-11-19-pencil-redesign.md)、[2026-11-19 全站重新設計切版](./plans/archive/2026-11-19-redesign-implementation.md)） |
-| `../design/flower-life/flower-life.pen` | 全站重新設計的 Pencil 設計稿（夜色花房，10 頁 × 5 斷點＋狀態稿），需用 Pencil 開啟；同層 `images/` 為 Pencil 產生的圖片，需和 .pen 放在一起 |
+| [plans/](./plans/) | 進行中的開發計畫；完成後移至 [plans/archive/](./plans/archive/)（已歸檔：[2026-11-11 綠界 AIO 金流串接](./plans/archive/2026-11-11-ecpay-aio-integration.md)、[2026-11-19 全站重新設計設計稿](./plans/archive/2026-11-19-pencil-redesign.md)、[2026-11-19 全站重新設計切版](./plans/archive/2026-11-19-redesign-implementation.md)、[2026-11-19 Playwright E2E 測試 skill](./plans/archive/2026-11-19-playwright-e2e-skill.md)） |
+| `docs/design/flower-life/flower-life.pen` | 全站重新設計的 Pencil 設計稿（夜色花房，10 頁 × 5 斷點＋狀態稿），需用 Pencil 開啟；同層 `images/` 為 Pencil 產生的圖片，需和 .pen 放在一起 |
