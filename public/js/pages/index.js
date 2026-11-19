@@ -3,14 +3,15 @@ const { createApp, ref, onMounted } = Vue;
 createApp({
   setup() {
     const products = ref([]);
+    const featured = ref([]);
     const pagination = ref({ total: 0, page: 1, limit: 9, totalPages: 0 });
     const loading = ref(true);
+    const fallbackImage = '/images/products/seasonal.jpg';
 
-    const featuredImages = [
-      'https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=400',
-      'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=400',
-      'https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=400',
-      'https://images.unsplash.com/photo-1455659817273-f96807779a8a?w=400',
+    const reviews = [
+      { name: '小美', text: '花束非常漂亮，包裝精緻，送給媽媽她超開心的！配送也很準時。' },
+      { name: '阿明', text: '第二次購買了，品質一如既往的好。花材新鮮，整體搭配很有美感。' },
+      { name: '大衛', text: '女朋友收到花束超感動！會再回購的，推薦給大家！' }
     ];
 
     async function loadProducts(page) {
@@ -23,15 +24,15 @@ createApp({
           return p;
         });
         pagination.value = res.data.pagination;
+        // 本季精選固定取第一頁的前 4 項，切換分頁時不跟著變
+        if (page === 1 && featured.value.length === 0) {
+          featured.value = products.value.slice(0, 4);
+        }
       } catch (e) {
         products.value = [];
       } finally {
         loading.value = false;
       }
-    }
-
-    function goToProduct(id) {
-      window.location.href = '/products/' + id;
     }
 
     async function addToCart(product) {
@@ -43,13 +44,7 @@ createApp({
           body: JSON.stringify({ productId: product.id, quantity: 1 })
         });
         Notification.show('已加入購物車', 'success');
-        // Update cart badge
-        var badge = document.getElementById('cart-badge');
-        if (badge) {
-          var count = parseInt(badge.textContent || '0') + 1;
-          badge.textContent = count;
-          badge.style.display = 'flex';
-        }
+        CartBadge.increment();
       } catch (e) {
         Notification.show('加入購物車失敗', 'error');
       } finally {
@@ -62,8 +57,8 @@ createApp({
     });
 
     return {
-      products, pagination, loading, featuredImages,
-      loadProducts, goToProduct, addToCart
+      products, featured, pagination, loading, fallbackImage, reviews,
+      loadProducts, addToCart
     };
   }
 }).mount('#app');

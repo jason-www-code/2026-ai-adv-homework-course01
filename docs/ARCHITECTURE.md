@@ -66,19 +66,21 @@
 │   │   ├── index.ejs, product-detail.ejs, cart.ejs, checkout.ejs,
 │   │   ├── login.ejs, orders.ejs, order-detail.ejs, 404.ejs
 │   │   └── admin/products.ejs, admin/orders.ejs
-│   └── partials/             # head（字型、output.css）、header、footer、notification、admin-header、admin-sidebar
+│   └── partials/             # head（字型、output.css）、header（含行動版選單）、footer、notification、admin-header、admin-sidebar、icon（lucide 線條圖示，`include('…/partials/icon', { name, cls })`）
 │
 ├── public/
-│   ├── css/input.css         # Tailwind 入口與 @theme 色彩 token
+│   ├── css/input.css         # Tailwind 入口：@theme 色彩／字體／斷點 token 與共用 class（按鈕、輸入框、膠囊）
 │   ├── css/output.css        # 編譯產物（gitignore，需先 build）
+│   ├── images/               # 設計稿照片：hero、登入、404、品牌故事，products/ 為 8 項 seed 商品圖
 │   ├── stylesheets/style.css # Express generator 遺留檔，沒有任何頁面引用
 │   └── js/
 │       ├── auth.js           # 全域 Auth 物件：localStorage 中的 token、user、session id
 │       ├── api.js            # 全域 apiFetch()：自動加標頭、處理 401
 │       ├── notification.js   # 全域 Notification.show(message, type)：右上角 toast
-│       ├── header-init.js    # 前台 header：登入狀態導覽列、購物車徽章
+│       ├── header-init.js    # 前台 header：依 data-auth 切換登入狀態、行動版選單、全域 CartBadge（購物車徽章）
 │       └── pages/*.js        # 各頁面的 Vue app（檔名 = pageScript）
 │
+├── design/flower-life/       # Pencil 設計稿 flower-life.pen（夜色花房，需用 Pencil 開啟）與 Pencil 產生的圖片 images/
 ├── tests/                    # Vitest + supertest 整合測試（見 TESTING.md）
 └── docs/                     # 專案文件
 ```
@@ -94,7 +96,8 @@
    - `PRAGMA journal_mode = WAL`、`PRAGMA foreign_keys = ON`。
    - `CREATE TABLE IF NOT EXISTS` 建立 5 張表。
    - `seedAdminUser()`：若 `ADMIN_EMAIL` 帳號不存在則建立管理員（`NODE_ENV=test` 時 bcrypt salt rounds = 1，否則 10）。
-   - `seedProducts()`：若 `products` 表為空，以 transaction 寫入 8 筆花卉商品。
+   - `seedProducts()`：若 `products` 表為空，以 transaction 寫入 8 筆花卉商品（圖片為本機 `/images/products/*.jpg`）。
+   - `upgradeSeedProductImages()`：把名稱相符、且 `image_url` 仍是舊 seed Unsplash 網址的商品改為本機圖片；管理員改過的圖片不動。
 4. `app.js` 設定 view engine、靜態檔、CORS、body parser、`sessionMiddleware`，掛載 API 與頁面路由、404、`errorHandler`。
 5. 回到 `server.js`：只有在 `require.main === module`（直接執行）時才檢查 `JWT_SECRET` 並 `listen(PORT)`。被測試 `require` 時不會 listen。
 
@@ -196,7 +199,7 @@
   "data": {
     "products": [
       { "id": "uuid", "name": "粉色玫瑰花束", "description": "...", "price": 1680, "stock": 30,
-        "image_url": "https://...", "created_at": "2026-11-10 14:37:49", "updated_at": "2026-11-10 14:37:49" }
+        "image_url": "/images/products/pink-roses.jpg", "created_at": "2026-11-10 14:37:49", "updated_at": "2026-11-10 14:37:49" }
     ],
     "pagination": { "total": 8, "page": 1, "limit": 2, "totalPages": 4 }
   },
@@ -319,7 +322,7 @@
 | `description` | TEXT | 可為 NULL | |
 | `price` | INTEGER | NOT NULL，CHECK `price > 0` | 單價 |
 | `stock` | INTEGER | NOT NULL DEFAULT 0，CHECK `stock >= 0` | 庫存 |
-| `image_url` | TEXT | 可為 NULL | 外部圖片網址（Unsplash） |
+| `image_url` | TEXT | 可為 NULL | 圖片網址；seed 商品為本機 `/images/products/*.jpg`，前端在 NULL 時改用 `seasonal.jpg` |
 | `created_at` | TEXT | NOT NULL DEFAULT `datetime('now')` | 列表排序依據（DESC） |
 | `updated_at` | TEXT | NOT NULL DEFAULT `datetime('now')` | 只有 admin PUT 會更新 |
 
@@ -466,5 +469,4 @@ users 1 ──< orders 1 ──< order_items ··· products（僅邏輯關聯�
 | 資源 | 用途 |
 |---|---|
 | `unpkg.com/vue@3` | 前端 Vue 3 global build（未鎖定版本） |
-| Google Fonts | Noto Sans TC / Noto Serif TC |
-| `images.unsplash.com` | 商品與首頁圖片 |
+| Google Fonts | Cactus Classical Serif（標題）／Noto Sans TC（內文與介面） |

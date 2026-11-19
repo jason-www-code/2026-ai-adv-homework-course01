@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <%- include('../partials/head') %>
-<body class="min-h-screen flex flex-col">
+<body class="flex min-h-screen flex-col">
+  <a href="#main" class="sr-only z-[70] bg-marigold px-4 py-2 text-plum-night focus:not-sr-only focus:fixed focus:top-2 focus:left-2">跳到主要內容</a>
   <%- include('../partials/header') %>
-  <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+  <main id="main" class="flex-1">
     <%- body %>
   </main>
   <%- include('../partials/footer') %>

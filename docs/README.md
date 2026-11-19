@@ -89,4 +89,5 @@ npm run dev:server   # 伺服器（修改後端需手動重啟）
 | [FEATURES.md](./FEATURES.md) | 各功能的完成狀態、行為描述、參數、業務邏輯、錯誤情境與已知問題 |
 | [TESTING.md](./TESTING.md) | 測試檔案、依賴關係、輔助函式、撰寫範例、常見陷阱 |
 | [CHANGELOG.md](./CHANGELOG.md) | 更新日誌 |
-| [plans/](./plans/) | 進行中的開發計畫；完成後移至 [plans/archive/](./plans/archive/)（已歸檔：[2026-11-11 綠界 AIO 金流串接](./plans/archive/2026-11-11-ecpay-aio-integration.md)） |
+| [plans/](./plans/) | 進行中的開發計畫；完成後移至 [plans/archive/](./plans/archive/)（已歸檔：[2026-11-11 綠界 AIO 金流串接](./plans/archive/2026-11-11-ecpay-aio-integration.md)、[2026-11-19 全站重新設計設計稿](./plans/archive/2026-11-19-pencil-redesign.md)、[2026-11-19 全站重新設計切版](./plans/archive/2026-11-19-redesign-implementation.md)） |
+| `../design/flower-life/flower-life.pen` | 全站重新設計的 Pencil 設計稿（夜色花房，10 頁 × 5 斷點＋狀態稿），需用 Pencil 開啟；同層 `images/` 為 Pencil 產生的圖片，需和 .pen 放在一起 |

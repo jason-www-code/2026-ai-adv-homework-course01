@@ -90,6 +90,7 @@ function initializeDatabase() {
   // Seed data
   seedAdminUser();
   seedProducts();
+  upgradeSeedProductImages();
 }
 
 function seedAdminUser() {
@@ -106,68 +107,78 @@ function seedAdminUser() {
   }
 }
 
+// image_url 為設計稿的暗調商品照（public/images/products/）；legacyImageUrl 是舊版 seed 的 Unsplash 網址，
+// 只用來把既有資料庫中「仍是舊網址」的 seed 商品換成新圖（見 upgradeSeedProductImages）。
+const SEED_PRODUCTS = [
+  {
+    name: '粉色玫瑰花束',
+    description: '精選 20 朵頂級粉色玫瑰，搭配滿天星與尤加利葉，由專業花藝師手工包紮。柔美的粉色花瓣層層綻放，散發淡雅清香，適合生日、紀念日或任何想要表達心意的場合。每束花皆附贈保鮮指南小卡與精美緞帶包裝，讓美麗延續更久。',
+    price: 1680,
+    stock: 30,
+    image_url: '/images/products/pink-roses.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1565279445322-30ab5314ff94?w=400'
+  },
+  {
+    name: '白色百合花禮盒',
+    description: '嚴選 6 枝純白香水百合，花朵碩大飽滿，綻放時散發優雅迷人的清甜香氣。搭配翠綠葉材，置於典雅燙金禮盒中，無需額外包裝即可直接送禮。適合開幕誌慶、喬遷祝賀、長輩生日等正式場合，傳遞最體面的祝福心意。',
+    price: 1280,
+    stock: 25,
+    image_url: '/images/products/white-lilies.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1555596112-ca9a1e964e13?w=400'
+  },
+  {
+    name: '繽紛向日葵花束',
+    description: '陽光般燦爛的向日葵 10 朵，搭配橙色雛菊、黃金球與新鮮綠葉，組成充滿活力的繽紛花束。向日葵象徵樂觀與希望，適合畢業祝賀、探病慰問或為朋友加油打氣。花束以牛皮紙與麻繩包裝，呈現自然清新的田園風格。',
+    price: 980,
+    stock: 40,
+    image_url: '/images/products/sunflowers.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1543409777-30250849aa3e?w=400'
+  },
+  {
+    name: '紫色鬱金香盆栽',
+    description: '荷蘭進口紫色鬱金香球根盆栽，含手工陶瓷花盆，整體高度約 25-30cm。鬱金香花期約 2-3 週，花朵會隨光線開合，姿態優雅迷人。放置於明亮通風處，每 2-3 天澆水一次即可。適合擺放在書桌、窗台或玄關，為空間增添一抹春日浪漫。',
+    price: 750,
+    stock: 50,
+    image_url: '/images/products/purple-tulips.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1668170782281-330e987237ba?w=400'
+  },
+  {
+    name: '乾燥花藝術花圈',
+    description: '由花藝師手工製作的乾燥花圈，直徑約 30cm，嚴選棉花、兔尾草、星辰花、尤加利葉等天然花材，以大地色系與柔粉色調交織而成。無需澆水照顧，可保存 6 個月以上，是居家門飾、牆面裝飾或拍照道具的絕佳選擇。附贈麻繩掛環，收到即可懸掛。',
+    price: 1450,
+    stock: 20,
+    image_url: '/images/products/dried-wreath.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1610467618849-66d363f5aa16?w=400'
+  },
+  {
+    name: '迷你多肉組合盆',
+    description: '嚴選 5 種不同品種的迷你多肉植物（含石蓮花、熊童子、虹之玉等），搭配手工水泥圓盆與鋪面小石，整體直徑約 15cm。多肉植物耐旱好照顧，約 7-10 天澆水一次即可，是辦公桌、書架上的療癒小物。適合送給喜歡綠植但忙碌的朋友。',
+    price: 580,
+    stock: 60,
+    image_url: '/images/products/succulents.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1763609196518-46f0ee9d5cfd?w=400'
+  },
+  {
+    name: '經典紅玫瑰花束',
+    description: '頂級厄瓜多進口紅玫瑰 99 朵，花朵碩大、色澤濃郁飽滿，象徵「長長久久」的永恆愛情。搭配滿天星與進口葉材，以豪華紅色緞帶與高級霧面包裝紙層層包紮，花束直徑超過 50cm，氣勢磅礴。最適合求婚、情人節或重要紀念日，給摯愛最隆重的浪漫告白。',
+    price: 3980,
+    stock: 15,
+    image_url: '/images/products/red-roses.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1735598564837-dc45391d5ca1?w=400'
+  },
+  {
+    name: '季節鮮花訂閱（月配）',
+    description: '每月由駐店花藝師依當季花材精心搭配一束鮮花，直送到府。春天有鬱金香與牡丹，夏天有繡球與向日葵，秋冬則有菊花與聖誕紅等應景花材。每次收花都是驚喜，讓家中四季皆有鮮花相伴。訂閱期間享免運優惠，每月中旬配送，亦可指定暫停月份。',
+    price: 890,
+    stock: 100,
+    image_url: '/images/products/seasonal.jpg',
+    legacyImageUrl: 'https://images.unsplash.com/photo-1610190427750-03e9095f18e3?w=400'
+  }
+];
+
 function seedProducts() {
   const count = db.prepare('SELECT COUNT(*) as count FROM products').get();
   if (count.count > 0) return;
-
-  const seedProducts = [
-    {
-      name: '粉色玫瑰花束',
-      description: '精選 20 朵頂級粉色玫瑰，搭配滿天星與尤加利葉，由專業花藝師手工包紮。柔美的粉色花瓣層層綻放，散發淡雅清香，適合生日、紀念日或任何想要表達心意的場合。每束花皆附贈保鮮指南小卡與精美緞帶包裝，讓美麗延續更久。',
-      price: 1680,
-      stock: 30,
-      image_url: 'https://images.unsplash.com/photo-1565279445322-30ab5314ff94?w=400'
-    },
-    {
-      name: '白色百合花禮盒',
-      description: '嚴選 6 枝純白香水百合，花朵碩大飽滿，綻放時散發優雅迷人的清甜香氣。搭配翠綠葉材，置於典雅燙金禮盒中，無需額外包裝即可直接送禮。適合開幕誌慶、喬遷祝賀、長輩生日等正式場合，傳遞最體面的祝福心意。',
-      price: 1280,
-      stock: 25,
-      image_url: 'https://images.unsplash.com/photo-1555596112-ca9a1e964e13?w=400'
-    },
-    {
-      name: '繽紛向日葵花束',
-      description: '陽光般燦爛的向日葵 10 朵，搭配橙色雛菊、黃金球與新鮮綠葉，組成充滿活力的繽紛花束。向日葵象徵樂觀與希望，適合畢業祝賀、探病慰問或為朋友加油打氣。花束以牛皮紙與麻繩包裝，呈現自然清新的田園風格。',
-      price: 980,
-      stock: 40,
-      image_url: 'https://images.unsplash.com/photo-1543409777-30250849aa3e?w=400'
-    },
-    {
-      name: '紫色鬱金香盆栽',
-      description: '荷蘭進口紫色鬱金香球根盆栽，含手工陶瓷花盆，整體高度約 25-30cm。鬱金香花期約 2-3 週，花朵會隨光線開合，姿態優雅迷人。放置於明亮通風處，每 2-3 天澆水一次即可。適合擺放在書桌、窗台或玄關，為空間增添一抹春日浪漫。',
-      price: 750,
-      stock: 50,
-      image_url: 'https://images.unsplash.com/photo-1668170782281-330e987237ba?w=400'
-    },
-    {
-      name: '乾燥花藝術花圈',
-      description: '由花藝師手工製作的乾燥花圈，直徑約 30cm，嚴選棉花、兔尾草、星辰花、尤加利葉等天然花材，以大地色系與柔粉色調交織而成。無需澆水照顧，可保存 6 個月以上，是居家門飾、牆面裝飾或拍照道具的絕佳選擇。附贈麻繩掛環，收到即可懸掛。',
-      price: 1450,
-      stock: 20,
-      image_url: 'https://images.unsplash.com/photo-1610467618849-66d363f5aa16?w=400'
-    },
-    {
-      name: '迷你多肉組合盆',
-      description: '嚴選 5 種不同品種的迷你多肉植物（含石蓮花、熊童子、虹之玉等），搭配手工水泥圓盆與鋪面小石，整體直徑約 15cm。多肉植物耐旱好照顧，約 7-10 天澆水一次即可，是辦公桌、書架上的療癒小物。適合送給喜歡綠植但忙碌的朋友。',
-      price: 580,
-      stock: 60,
-      image_url: 'https://images.unsplash.com/photo-1763609196518-46f0ee9d5cfd?w=400'
-    },
-    {
-      name: '經典紅玫瑰花束',
-      description: '頂級厄瓜多進口紅玫瑰 99 朵，花朵碩大、色澤濃郁飽滿，象徵「長長久久」的永恆愛情。搭配滿天星與進口葉材，以豪華紅色緞帶與高級霧面包裝紙層層包紮，花束直徑超過 50cm，氣勢磅礴。最適合求婚、情人節或重要紀念日，給摯愛最隆重的浪漫告白。',
-      price: 3980,
-      stock: 15,
-      image_url: 'https://images.unsplash.com/photo-1735598564837-dc45391d5ca1?w=400'
-    },
-    {
-      name: '季節鮮花訂閱（月配）',
-      description: '每月由駐店花藝師依當季花材精心搭配一束鮮花，直送到府。春天有鬱金香與牡丹，夏天有繡球與向日葵，秋冬則有菊花與聖誕紅等應景花材。每次收花都是驚喜，讓家中四季皆有鮮花相伴。訂閱期間享免運優惠，每月中旬配送，亦可指定暫停月份。',
-      price: 890,
-      stock: 100,
-      image_url: 'https://images.unsplash.com/photo-1610190427750-03e9095f18e3?w=400'
-    }
-  ];
 
   const insert = db.prepare(
     'INSERT INTO products (id, name, description, price, stock, image_url) VALUES (?, ?, ?, ?, ?, ?)'
@@ -179,7 +190,17 @@ function seedProducts() {
     }
   });
 
-  insertMany(seedProducts);
+  insertMany(SEED_PRODUCTS);
+}
+
+// 冪等：只更新名稱相同且圖片仍是舊 seed 網址的商品，管理員改過的圖片不受影響。
+function upgradeSeedProductImages() {
+  const update = db.prepare('UPDATE products SET image_url = ? WHERE name = ? AND image_url = ?');
+  db.transaction(() => {
+    for (const p of SEED_PRODUCTS) {
+      update.run(p.image_url, p.name, p.legacyImageUrl);
+    }
+  })();
 }
 
 initializeDatabase();

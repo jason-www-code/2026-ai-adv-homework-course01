@@ -1,40 +1,50 @@
-<div id="app">
-  <h1 class="text-2xl font-bold text-text-primary mb-6" style="font-family: 'Noto Serif TC', serif;">我的訂單</h1>
-
-  <div v-if="loading" class="flex justify-center py-12">
-    <div class="w-8 h-8 border-4 border-rose-primary border-t-transparent rounded-full animate-spin"></div>
+<div id="app" v-cloak>
+  <div v-if="loading" class="flex justify-center py-32">
+    <div class="spinner" role="status" aria-label="載入中"></div>
   </div>
 
-  <div v-else-if="orders.length === 0" class="text-center py-12">
-    <div class="text-4xl mb-3">&#128230;</div>
-    <p class="text-text-secondary mb-1">尚無訂單</p>
-    <p class="text-text-muted text-sm mb-4">快去選購喜歡的花束吧！</p>
-    <a href="/" class="inline-block bg-rose-primary text-white px-6 py-2 rounded-full text-sm hover:bg-rose-dark transition-colors">去逛逛</a>
-  </div>
+  <!-- 尚無訂單 -->
+  <section v-else-if="orders.length === 0" class="page-x flex min-h-[560px] flex-col items-center justify-center gap-6 text-center xl:min-h-[720px]">
+    <%- include('../partials/icon', { name: 'package', cls: 'h-10 w-10 text-mauve xl:h-12 xl:w-12' }) %>
+    <h1 class="font-display text-[32px] leading-[1.2] xl:text-5xl">還沒有訂單</h1>
+    <p class="text-[15px] text-mauve xl:text-[17px]">下第一筆訂單後，就能在這裡查看進度。</p>
+    <a href="/#products" class="btn-primary mt-4">挑選花束</a>
+  </section>
 
-  <div v-else class="space-y-4">
-    <a
-      v-for="order in orders"
-      :key="order.id"
-      :href="'/orders/' + order.id"
-      class="block bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow"
-    >
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-text-secondary">訂單編號：{{ order.order_no }}</p>
-          <p class="text-xs text-text-muted mt-1">{{ new Date(order.created_at).toLocaleDateString('zh-TW') }}</p>
+  <section v-else class="page-x pt-7 pb-[84px] sm:pt-8 sm:pb-24 md:pt-10 md:pb-[120px] xl:pt-14 xl:pb-[200px] 2xl:pt-16">
+    <div class="mb-7 flex items-end justify-between xl:mb-12">
+      <h1 class="h-page">我的訂單</h1>
+      <p class="text-[15px] text-mauve">{{ orders.length }} 筆訂單</p>
+    </div>
+
+    <div class="hidden gap-8 border-b border-plum-line pb-4 text-[13px] text-mauve md:flex">
+      <span class="flex-1">訂單編號</span>
+      <span class="w-[120px] xl:w-[200px]">下單日期</span>
+      <span class="w-[120px] xl:w-[200px]">金額</span>
+      <span class="w-[110px] xl:w-40">狀態</span>
+      <span class="w-5"></span>
+    </div>
+
+    <a v-for="order in orders" :key="order.id" :href="'/orders/' + order.id" class="group flex items-center gap-3 border-b border-plum-line py-[22px] md:gap-8 md:py-[30px]">
+      <!-- 手機：兩行堆疊 -->
+      <div class="flex min-w-0 flex-1 flex-col gap-2.5 md:hidden">
+        <div class="flex items-center justify-between gap-3">
+          <span class="truncate text-[15px] font-medium">{{ order.order_no }}</span>
+          <span class="badge border" :class="statusMap[order.status]?.cls"><span class="h-1.5 w-1.5 rounded-full" :class="statusMap[order.status]?.dot"></span>{{ statusMap[order.status]?.label || order.status }}</span>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="font-bold text-text-primary">NT$ {{ order.total_amount.toLocaleString() }}</span>
-          <span
-            class="text-xs px-3 py-1 rounded-full font-medium"
-            :class="statusMap[order.status]?.cls || 'bg-gray-100 text-gray-600'"
-          >
-            {{ statusMap[order.status]?.label || order.status }}
-          </span>
-          <span class="text-text-muted">&#8594;</span>
+        <div class="flex justify-between">
+          <span class="text-sm text-mauve">{{ formatDate(order.created_at) }}</span>
+          <span class="text-[15px] font-medium">NT$ {{ order.total_amount.toLocaleString() }}</span>
         </div>
       </div>
+      <!-- 768 以上：表格欄位 -->
+      <span class="hidden min-w-0 flex-1 truncate text-[17px] font-medium decoration-1 underline-offset-4 group-hover:underline md:block">{{ order.order_no }}</span>
+      <span class="hidden w-[120px] text-[15px] text-mauve md:block xl:w-[200px]">{{ formatDate(order.created_at) }}</span>
+      <span class="hidden w-[120px] text-[17px] font-medium md:block xl:w-[200px]">NT$ {{ order.total_amount.toLocaleString() }}</span>
+      <span class="hidden w-[110px] md:block xl:w-40">
+        <span class="badge border" :class="statusMap[order.status]?.cls"><span class="h-1.5 w-1.5 rounded-full" :class="statusMap[order.status]?.dot"></span>{{ statusMap[order.status]?.label || order.status }}</span>
+      </span>
+      <%- include('../partials/icon', { name: 'chevron-right', cls: 'h-5 w-5 shrink-0 text-mauve' }) %>
     </a>
-  </div>
+  </section>
 </div>

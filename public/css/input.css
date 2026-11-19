@@ -1,21 +1,167 @@
 @import "tailwindcss";
 
+/* 夜色花房設計系統（設計稿：design/flower-life/flower-life.pen，規格：docs/plans/archive/2026-11-19-pencil-redesign.md） */
 @theme {
-  --color-rose-primary: #C4727F;
-  --color-rose-dark: #A85B67;
-  --color-rose-light: #E8A5AE;
-  --color-apricot: #D4956A;
-  --color-sage: #7EA584;
-  --color-cream: #FBF8F4;
-  --color-blush: #FFF1EC;
-  --color-rose-bg: #FDEAE4;
-  --color-text-primary: #2C2A28;
-  --color-text-secondary: #6B6560;
-  --color-text-muted: #9A948E;
+  /* 斷點對應設計稿：576／768／1024（桌機版型起點）／1440／1920 */
+  --breakpoint-sm: 36rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 90rem;
+  --breakpoint-2xl: 120rem;
+
+  --font-sans: 'Noto Sans TC', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cactus Classical Serif', 'Noto Serif TC', serif;
+
+  /* 深色底（前台） */
+  --color-plum-night: #2B1A24;
+  --color-plum-raised: #3B2733;
+  --color-plum-line: #4E3744;
+  --color-ivory: #F3EDE4;
+  --color-mauve: #B8A3AE;
+  /* 金盞：只用於主要動作與選取狀態 */
+  --color-marigold: #E8B04B;
+  --color-marigold-dark: #D49A33;
+
+  /* 象牙紙面（交易文件、後台內容區） */
+  --color-paper: #F3EDE4;
+  --color-paper-sunk: #E9E1D5;
+  --color-paper-line: #DCD2C6;
+  --color-paper-ink: #2B1A24;
+  --color-paper-ink-2: #6E5A64;
+
+  /* 訂單狀態：深色底用 pending/paid/failed，紙面用 *-ink 文字配 *-tint 底 */
+  --color-pending: #E8B04B;
+  --color-paid: #9CC59A;
+  --color-failed: #E5806B;
+  --color-pending-ink: #8A5A00;
+  --color-paid-ink: #2F6B35;
+  --color-failed-ink: #A33A23;
+  --color-pending-tint: #F4E2BC;
+  --color-paid-tint: #DCEBD9;
+  --color-failed-tint: #F6D9D0;
 }
 
-body {
-  font-family: 'Noto Sans TC', sans-serif;
-  background-color: var(--color-cream);
-  color: var(--color-text-primary);
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-plum-night);
+    color: var(--color-ivory);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marigold);
+    outline-offset: 2px;
+  }
+
+  /* 紙面上金盞外框對比不足，改用梅夜 */
+  .theme-paper :focus-visible {
+    outline-color: var(--color-paper-ink);
+  }
+
+  .theme-paper .theme-night :focus-visible {
+    outline-color: var(--color-marigold);
+  }
+
+  [v-cloak] {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* 頁面左右外距：390→20、576→24、768→40、1440→96、1920→160 */
+  .page-x {
+    @apply px-5 sm:px-6 md:px-10 xl:px-24 2xl:px-40;
+  }
+
+  /* 區塊標題（H2）：32／36／40／48／56 */
+  .h-section {
+    @apply font-display text-[32px] leading-[1.2] font-normal sm:text-4xl md:text-[40px] xl:text-5xl 2xl:text-[56px];
+  }
+
+  /* 內頁標題（H1）：30／34／40／48／56 */
+  .h-page {
+    @apply font-display text-[30px] leading-[1.2] font-normal sm:text-[34px] md:text-[40px] xl:text-5xl 2xl:text-[56px];
+  }
+
+  .btn-primary,
+  .btn-outline,
+  .btn-paper,
+  .btn-paper-outline,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-[2px] px-9 py-4 text-base font-medium leading-none transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* 深色底上的主要動作（每個畫面只放一個） */
+  .btn-primary {
+    @apply bg-marigold text-plum-night hover:bg-marigold-dark;
+  }
+
+  .btn-outline {
+    @apply border border-ivory text-ivory hover:bg-ivory/10;
+  }
+
+  /* 紙面上的主要動作 */
+  .btn-paper {
+    @apply bg-paper-ink text-ivory hover:bg-plum-raised;
+  }
+
+  .btn-paper-outline {
+    @apply border border-paper-ink text-paper-ink hover:bg-paper-sunk;
+  }
+
+  .btn-danger {
+    @apply bg-failed-ink text-white hover:bg-[#8A2F1B];
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-medium text-mauve;
+  }
+
+  .field-dark {
+    @apply h-[52px] w-full rounded-[2px] border border-plum-line bg-plum-raised px-4 text-base text-ivory transition-colors placeholder:text-mauve focus:border-marigold focus:outline-none;
+  }
+
+  .field-label-paper {
+    @apply mb-2 block text-sm font-medium text-paper-ink-2;
+  }
+
+  .field-paper {
+    @apply h-[52px] w-full rounded-[2px] border border-paper-line bg-white px-4 text-base text-paper-ink transition-colors placeholder:text-paper-ink-2 focus:border-paper-ink focus:outline-none;
+  }
+
+  .field-error {
+    @apply mt-2 text-sm text-failed;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1 text-[13px] font-medium leading-5;
+  }
+
+  .spinner {
+    @apply h-8 w-8 animate-spin rounded-full border-2 border-ivory/20 border-t-marigold;
+  }
+
+  .spinner-paper {
+    @apply h-8 w-8 animate-spin rounded-full border-2 border-paper-line border-t-paper-ink;
+  }
 }

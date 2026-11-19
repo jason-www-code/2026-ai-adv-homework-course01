@@ -6,6 +6,13 @@ createApp({
     const loading = ref(true);
     const confirmVisible = ref(false);
     const deleteItemId = ref('');
+    const loggedIn = Auth.isLoggedIn();
+    const fallbackImage = '/images/products/seasonal.jpg';
+
+    const deleteItemName = computed(function () {
+      var item = items.value.find(function (i) { return i.id === deleteItemId.value; });
+      return item ? item.product.name : '';
+    });
 
     const total = computed(function () {
       return items.value.reduce(function (sum, item) {
@@ -49,6 +56,7 @@ createApp({
       try {
         await apiFetch('/api/cart/' + deleteItemId.value, { method: 'DELETE' });
         items.value = items.value.filter(function (i) { return i.id !== deleteItemId.value; });
+        CartBadge.set(items.value.length);
         Notification.show('已從購物車移除', 'success');
       } catch (e) {
         Notification.show('移除失敗', 'error');
@@ -68,7 +76,7 @@ createApp({
     });
 
     return {
-      items, loading, total, confirmVisible,
+      items, loading, total, confirmVisible, deleteItemName, loggedIn, fallbackImage,
       updateQuantity, confirmDelete, handleDelete, goCheckout
     };
   }

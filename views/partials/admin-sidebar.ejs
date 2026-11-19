@@ -1,18 +1,52 @@
-<aside class="w-60 bg-gray-900 text-white min-h-full">
-  <nav class="py-4">
-    <a
-      href="/admin/products"
-      class="flex items-center gap-3 px-6 py-3 text-sm transition-colors hover:text-white hover:bg-gray-800 <%= typeof currentPath !== 'undefined' && currentPath === '/admin/products' ? 'bg-gray-800 !text-white border-r-2 border-rose-primary' : 'text-gray-400' %>"
-    >
-      <span>&#128230;</span>
-      <span>商品管理</span>
-    </a>
-    <a
-      href="/admin/orders"
-      class="flex items-center gap-3 px-6 py-3 text-sm transition-colors hover:text-white hover:bg-gray-800 <%= typeof currentPath !== 'undefined' && currentPath === '/admin/orders' ? 'bg-gray-800 !text-white border-r-2 border-rose-primary' : 'text-gray-400' %>"
-    >
-      <span>&#128196;</span>
-      <span>訂單管理</span>
-    </a>
+<%
+  var adminNav = [
+    { href: '/admin/products', label: '商品管理', icon: 'package' },
+    { href: '/admin/orders', label: '訂單管理', icon: 'receipt-text' }
+  ];
+  var activePath = typeof currentPath !== 'undefined' ? currentPath : '';
+%>
+<!-- 768 以下：頂部列＋分頁 -->
+<div class="theme-night bg-plum-night text-ivory md:hidden">
+  <div class="flex h-[60px] items-center justify-between px-5 sm:px-6">
+    <div class="flex items-end gap-2.5">
+      <a href="/admin/products" class="font-display text-[22px] leading-none">花漾生活</a>
+      <span class="text-xs text-mauve">管理後台</span>
+    </div>
+    <div class="flex items-center gap-[18px] text-mauve">
+      <a href="/" class="hover:text-ivory" aria-label="返回前台">
+        <%- include('icon', { name: 'store', cls: 'h-5 w-5' }) %>
+      </a>
+      <button type="button" onclick="Auth.logout()" class="cursor-pointer hover:text-ivory" aria-label="登出">
+        <%- include('icon', { name: 'log-out', cls: 'h-5 w-5' }) %>
+      </button>
+    </div>
+  </div>
+  <nav class="flex gap-7 px-5 sm:px-6" aria-label="後台導覽">
+    <% adminNav.forEach(function (item) { var active = activePath === item.href; %>
+    <a href="<%= item.href %>" class="border-b-2 py-3 text-[15px] <%= active ? 'border-marigold font-medium text-ivory' : 'border-transparent text-mauve hover:text-ivory' %>"<% if (active) { %> aria-current="page"<% } %>><%= item.label %></a>
+    <% }) %>
   </nav>
+</div>
+
+<!-- 768–1439：圖示軌；1440 以上：完整側欄 -->
+<aside class="theme-night hidden w-[72px] shrink-0 flex-col justify-between bg-plum-night py-7 text-ivory md:sticky md:top-0 md:flex md:h-screen xl:w-60 xl:py-8 2xl:w-[264px]">
+  <div class="flex flex-col gap-8 xl:gap-10">
+    <a href="/admin/products" class="flex flex-col items-center gap-1.5 xl:items-start xl:px-8">
+      <span class="font-display text-[28px] leading-none xl:hidden" aria-hidden="true">花</span>
+      <span class="hidden font-display text-[26px] leading-none xl:inline">花漾生活</span>
+      <span class="sr-only xl:not-sr-only xl:text-[13px] xl:text-mauve">管理後台</span>
+    </a>
+    <nav class="flex flex-col" aria-label="後台導覽">
+      <% adminNav.forEach(function (item) { var active = activePath === item.href; %>
+      <a href="<%= item.href %>" title="<%= item.label %>" class="flex h-14 items-center justify-center gap-3.5 border-l-[3px] xl:h-auto xl:justify-start xl:px-8 xl:py-4 <%= active ? 'border-marigold bg-plum-raised font-medium text-ivory' : 'border-transparent text-mauve hover:text-ivory' %>"<% if (active) { %> aria-current="page"<% } %>>
+        <%- include('icon', { name: item.icon, cls: 'h-[22px] w-[22px] xl:h-5 xl:w-5' }) %>
+        <span class="sr-only text-[15px] xl:not-sr-only"><%= item.label %></span>
+      </a>
+      <% }) %>
+    </nav>
+  </div>
+  <a href="/" title="返回前台" class="flex items-center justify-center gap-3 text-mauve hover:text-ivory xl:justify-start xl:px-8">
+    <%- include('icon', { name: 'store', cls: 'h-5 w-5 xl:h-[18px] xl:w-[18px]' }) %>
+    <span class="sr-only text-sm xl:not-sr-only">返回前台</span>
+  </a>
 </aside>

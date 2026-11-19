@@ -1,98 +1,119 @@
-<div id="app" data-order-id="<%= orderId %>" data-payment-result="<%= paymentResult %>">
-  <h1 class="text-2xl font-bold text-text-primary mb-6" style="font-family: 'Noto Serif TC', serif;">訂單詳情</h1>
-
-  <div v-if="loading" class="flex justify-center py-12">
-    <div class="w-8 h-8 border-4 border-rose-primary border-t-transparent rounded-full animate-spin"></div>
+<div id="app" data-order-id="<%= orderId %>" data-payment-result="<%= paymentResult %>" v-cloak>
+  <div v-if="loading" class="flex justify-center py-32">
+    <div class="spinner" role="status" aria-label="載入中"></div>
   </div>
 
-  <template v-else-if="order">
-    <!-- Payment Result Alert -->
-    <div
-      v-if="paymentResult && paymentMessages[paymentResult]"
-      class="rounded-xl p-4 mb-6 text-sm"
-      :class="paymentMessages[paymentResult].cls"
-    >
-      {{ paymentMessages[paymentResult].text }}
+  <section v-else-if="!order" class="page-x flex min-h-[560px] flex-col items-center justify-center gap-6 text-center">
+    <h1 class="font-display text-[32px] leading-[1.2] xl:text-5xl">找不到這筆訂單</h1>
+    <p class="text-[15px] text-mauve">訂單可能不存在，或不屬於目前登入的帳號。</p>
+    <a href="/orders" class="btn-outline mt-4">回到我的訂單</a>
+  </section>
+
+  <section v-else class="page-x flex flex-col gap-6 pt-7 pb-14 sm:pt-8 sm:pb-16 md:pt-10 md:pb-20 xl:gap-9 xl:pt-14 xl:pb-40 2xl:pt-16">
+    <a href="/orders" class="flex w-fit items-center gap-1.5 text-sm text-mauve hover:text-ivory">
+      <%- include('../partials/icon', { name: 'chevron-left', cls: 'h-4 w-4' }) %>
+      我的訂單
+    </a>
+
+    <!-- 付款結果橫幅 -->
+    <div v-if="paymentResult && paymentMessages[paymentResult]" class="flex items-center gap-3 rounded-[2px] border px-5 py-4 text-[15px] leading-[1.6]" :class="paymentMessages[paymentResult].cls" role="status">
+      <span class="shrink-0" :class="paymentMessages[paymentResult].iconCls">
+        <%- include('../partials/icon', { name: 'circle-check', cls: 'h-5 w-5', attrs: 'v-if="paymentMessages[paymentResult].icon === \'circle-check\'"' }) %>
+        <%- include('../partials/icon', { name: 'circle-x', cls: 'h-5 w-5', attrs: 'v-else-if="paymentMessages[paymentResult].icon === \'circle-x\'"' }) %>
+        <%- include('../partials/icon', { name: 'clock', cls: 'h-5 w-5', attrs: 'v-else-if="paymentMessages[paymentResult].icon === \'clock\'"' }) %>
+        <%- include('../partials/icon', { name: 'circle-minus', cls: 'h-5 w-5', attrs: 'v-else-if="paymentMessages[paymentResult].icon === \'circle-minus\'"' }) %>
+        <%- include('../partials/icon', { name: 'triangle-alert', cls: 'h-5 w-5', attrs: 'v-else' }) %>
+      </span>
+      <span>{{ paymentMessages[paymentResult].text }}</span>
     </div>
 
-    <!-- Order Info -->
-    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-sm text-text-secondary">訂單編號：{{ order.order_no }}</p>
-          <p class="text-xs text-text-muted mt-1">建立日期：{{ new Date(order.created_at).toLocaleDateString('zh-TW') }}</p>
+    <div class="flex flex-col gap-3.5">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <h1 class="h-page">訂單詳情</h1>
+        <span class="badge border" :class="statusMap[order.status]?.cls"><span class="h-1.5 w-1.5 rounded-full" :class="statusMap[order.status]?.dot"></span>{{ statusMap[order.status]?.label || order.status }}</span>
+      </div>
+      <p class="text-sm text-mauve md:text-[15px]">訂單編號 {{ order.order_no }}<span class="mx-3" aria-hidden="true"></span>建立於 {{ formatDate(order.created_at) }}</p>
+    </div>
+
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-14 xl:gap-16 2xl:gap-20">
+      <!-- 收據（象牙紙面） -->
+      <article class="theme-paper flex min-w-0 flex-1 flex-col gap-7 bg-paper p-6 text-paper-ink sm:p-8 md:gap-9 md:p-12" aria-label="訂單收據">
+        <div class="flex flex-col gap-3.5">
+          <h2 class="text-[13px] font-medium text-paper-ink-2">收件資訊</h2>
+          <dl class="flex flex-col gap-3.5 text-[15px]">
+            <div class="flex gap-4"><dt class="w-14 shrink-0 text-paper-ink-2 md:w-20">收件人</dt><dd class="min-w-0">{{ order.recipient_name }}</dd></div>
+            <div class="flex gap-4"><dt class="w-14 shrink-0 text-paper-ink-2 md:w-20">Email</dt><dd class="min-w-0 break-all">{{ order.recipient_email }}</dd></div>
+            <div class="flex gap-4"><dt class="w-14 shrink-0 text-paper-ink-2 md:w-20">地址</dt><dd class="min-w-0">{{ order.recipient_address }}</dd></div>
+          </dl>
         </div>
-        <span
-          class="text-xs px-3 py-1 rounded-full font-medium"
-          :class="statusMap[order.status]?.cls || 'bg-gray-100 text-gray-600'"
-        >
-          {{ statusMap[order.status]?.label || order.status }}
-        </span>
-      </div>
-    </div>
 
-    <!-- Recipient Info -->
-    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
-      <h2 class="font-medium text-text-primary mb-3">收件資訊</h2>
-      <div class="text-sm space-y-2 text-text-secondary">
-        <p>收件人：{{ order.recipient_name }}</p>
-        <p>Email：{{ order.recipient_email }}</p>
-        <p>地址：{{ order.recipient_address }}</p>
-      </div>
-    </div>
+        <div class="flex flex-col gap-3.5">
+          <h2 class="text-[13px] font-medium text-paper-ink-2">商品明細</h2>
+          <table class="hidden w-full text-[15px] md:table">
+            <thead>
+              <tr class="border-b border-paper-line text-[13px] text-paper-ink-2">
+                <th class="pb-3 text-left font-normal">商品名稱</th>
+                <th class="w-[120px] pb-3 text-right font-normal">單價</th>
+                <th class="w-16 pb-3 text-right font-normal">數量</th>
+                <th class="w-[120px] pb-3 text-right font-normal">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in order.items" :key="item.id" class="border-b border-paper-line">
+                <td class="py-4">{{ item.product_name }}</td>
+                <td class="py-4 text-right text-paper-ink-2">NT$ {{ item.product_price.toLocaleString() }}</td>
+                <td class="py-4 text-right text-paper-ink-2">{{ item.quantity }}</td>
+                <td class="py-4 text-right font-medium">NT$ {{ (item.product_price * item.quantity).toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <ul class="md:hidden">
+            <li v-for="item in order.items" :key="item.id" class="flex items-center justify-between gap-4 border-b border-paper-line py-3.5">
+              <div class="flex flex-col gap-1">
+                <span class="text-[15px]">{{ item.product_name }}</span>
+                <span class="text-[13px] text-paper-ink-2">NT$ {{ item.product_price.toLocaleString() }} × {{ item.quantity }}</span>
+              </div>
+              <span class="text-[15px] font-medium whitespace-nowrap">NT$ {{ (item.product_price * item.quantity).toLocaleString() }}</span>
+            </li>
+          </ul>
+        </div>
 
-    <!-- Order Items -->
-    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
-      <h2 class="font-medium text-text-primary mb-3">商品明細</h2>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-100 text-text-muted">
-            <th class="text-left py-2 font-normal">商品名稱</th>
-            <th class="text-right py-2 font-normal">單價</th>
-            <th class="text-right py-2 font-normal">數量</th>
-            <th class="text-right py-2 font-normal">小計</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in order.items" :key="item.id" class="border-b border-gray-50">
-            <td class="py-3 text-text-primary">{{ item.product_name }}</td>
-            <td class="py-3 text-right text-text-secondary">NT$ {{ item.product_price.toLocaleString() }}</td>
-            <td class="py-3 text-right text-text-secondary">{{ item.quantity }}</td>
-            <td class="py-3 text-right text-text-primary font-medium">NT$ {{ (item.product_price * item.quantity).toLocaleString() }}</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" class="pt-3 text-right font-bold text-text-primary">總計</td>
-            <td class="pt-3 text-right font-bold text-rose-primary text-lg">NT$ {{ order.total_amount.toLocaleString() }}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="font-medium">總計</span>
+            <span class="badge" :class="paperStatusMap[order.status]?.cls"><span class="h-1.5 w-1.5 rounded-full" :class="paperStatusMap[order.status]?.dot"></span>{{ statusMap[order.status]?.label || order.status }}</span>
+          </div>
+          <span class="text-2xl font-bold md:text-[28px]">NT$ {{ order.total_amount.toLocaleString() }}</span>
+        </div>
+      </article>
 
-    <!-- Payment Buttons -->
-    <div v-if="order.status === 'pending'" class="bg-white rounded-2xl shadow-sm p-6">
-      <h2 class="font-medium text-text-primary mb-3">付款</h2>
-      <div class="flex flex-wrap gap-4">
-        <button
-          @click="goEcpay"
-          :disabled="redirecting || verifying"
-          class="bg-rose-primary text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-rose-dark transition-colors disabled:opacity-50"
-        >
-          {{ redirecting ? '前往綠界中...' : '前往綠界付款' }}
-        </button>
-        <button
-          @click="verifyPayment"
-          :disabled="redirecting || verifying"
-          class="border border-rose-primary text-rose-primary px-8 py-3 rounded-full text-sm font-medium hover:bg-rose-bg transition-colors disabled:opacity-50"
-        >
-          {{ verifying ? '查詢中...' : '重新查詢付款結果' }}
-        </button>
-      </div>
-      <p class="text-xs text-text-muted mt-4 leading-relaxed">
-        將以綠界信用卡付款（測試環境）。測試卡號 4311-9522-2222-2222，有效期限任意未來月年，安全碼任意三碼，3D 驗證碼 1234。<br>
-        付款完成後會自動導回本頁並向綠界查詢結果；若狀態未更新，請按「重新查詢付款結果」。
-      </p>
+      <!-- 待付款：綠界付款 -->
+      <aside v-if="order.status === 'pending'" class="flex flex-col gap-5 border border-plum-line p-6 sm:p-8 md:p-10 lg:w-[380px] xl:w-[420px] 2xl:w-[480px]" aria-labelledby="pay-title">
+        <h2 id="pay-title" class="font-display text-[28px] leading-[1.2]">付款</h2>
+        <p class="text-[15px] text-mauve">以綠界信用卡付款（測試環境）。</p>
+        <button type="button" @click="goEcpay" :disabled="redirecting || verifying" class="btn-primary w-full">{{ redirecting ? '前往綠界中…' : '前往綠界付款' }}</button>
+        <button type="button" @click="verifyPayment" :disabled="redirecting || verifying" class="btn-outline w-full">{{ verifying ? '查詢中…' : '重新查詢付款結果' }}</button>
+        <div class="flex flex-col gap-2.5 border-t border-plum-line pt-5 text-sm">
+          <p class="font-medium">測試卡資料</p>
+          <div class="flex justify-between"><span class="text-mauve">卡號</span><span class="font-medium">4311-9522-2222-2222</span></div>
+          <div class="flex justify-between"><span class="text-mauve">有效期限</span><span class="font-medium">任意未來月年</span></div>
+          <div class="flex justify-between"><span class="text-mauve">安全碼</span><span class="font-medium">任意三碼</span></div>
+          <div class="flex justify-between"><span class="text-mauve">3D 驗證碼</span><span class="font-medium">1234</span></div>
+        </div>
+        <p class="text-[13px] leading-[1.7] text-mauve">付款完成後會自動導回本頁並查詢結果；若狀態沒有更新，請按「重新查詢付款結果」。</p>
+      </aside>
+
+      <aside v-else-if="order.status === 'paid'" class="flex flex-col gap-5 border border-plum-line p-6 sm:p-8 md:p-10 lg:w-[380px] xl:w-[420px] 2xl:w-[480px]">
+        <h2 class="font-display text-[28px] leading-[1.2]">付款完成</h2>
+        <p class="text-[15px] leading-[1.7] text-mauve">感謝你的訂購，花藝師會依這張訂單準備花束。</p>
+        <a href="/#products" class="btn-outline w-full">繼續挑選花束</a>
+      </aside>
+
+      <aside v-else class="flex flex-col gap-5 border border-plum-line p-6 sm:p-8 md:p-10 lg:w-[380px] xl:w-[420px] 2xl:w-[480px]">
+        <h2 class="font-display text-[28px] leading-[1.2]">付款未完成</h2>
+        <p class="text-[15px] leading-[1.7] text-mauve">這筆訂單已標記為付款失敗，無法再次付款。如需購買，請重新下單。</p>
+        <a href="/#products" class="btn-outline w-full">繼續挑選花束</a>
+      </aside>
     </div>
-  </template>
+  </section>
 </div>

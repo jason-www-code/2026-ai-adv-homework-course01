@@ -8,6 +8,8 @@
 
 ### Added
 
+- 全站重新設計切版（2026-11-19）：依「夜色花房」設計稿改寫 10 個頁面與前後台版型，計畫已歸檔為 `docs/plans/archive/2026-11-19-redesign-implementation.md`。新增 Tailwind token 與共用 class（`public/css/input.css`）、`views/partials/icon.ejs`（lucide 線條圖示）、`public/images/`（設計稿暗調照片）、前台 768 以下的全螢幕選單、全域 `CartBadge`（`header-init.js`）。
+- 全站重新設計設計稿（2026-11-19）：使用 Pencil 繪製「夜色花房」視覺方向（梅夜底、象牙紙面單據、金盞主要動作，標題用仙人掌明體），涵蓋前台 8 頁與後台 2 頁、各 5 個斷點（1920／1440／768／576／390），另含 21 張狀態稿。設計稿為 `design/flower-life/flower-life.pen`（同層 `images/` 為 Pencil 產生的圖片），規格見已歸檔計畫 `docs/plans/archive/2026-11-19-pencil-redesign.md`。
 - 綠界 ECPay AIO 信用卡金流（2026-11-11）：`POST /api/orders/:id/ecpay/checkout` 產生付款參數、`POST /api/orders/:id/ecpay/verify` 主動呼叫 `QueryTradeInfo/V5` 驗證 CheckMacValue 與金額後更新訂單、`POST /api/ecpay/notify`（ReturnURL）、`POST /ecpay/result/:orderId` 導回。因本地端收不到 Server Notify，付款結果一律以主動查詢為準。
 - `ecpay_payments` 資料表，記錄每次付款嘗試（新表，既有資料庫不需重建）。
 - `src/services/ecpay.js`、`src/services/ecpayPayment.js`。
@@ -19,6 +21,10 @@
 
 ### Changed
 
+- 全站視覺改為「夜色花房」：梅夜底、象牙紙面單據（購物車摘要、結帳訂購單、訂單收據、後台內容區）、金盞只用於主要動作；字體改為 Cactus Classical Serif（標題）＋ Noto Sans TC；斷點改為 576／768／1024／1440／1920。原 `rose-primary`、`sage`、`apricot`、`cream` 等 token 移除。
+- seed 商品圖片由 Unsplash 外部網址改為本機 `/images/products/*.jpg`；啟動時把「仍是舊 seed 網址」的商品改為新圖（管理員改過的圖片不動），既有資料庫不需重建。
+- 後台版型：768 以下為頂部列＋分頁，768–1439 為圖示軌，1440 以上為完整側欄；「返回前台」移到側欄，移除後台 footer。後台訂單的狀態篩選由下拉選單改為分段按鈕。
+- 所有 Vue 頁面根元素加上 `v-cloak`，載入前不再閃現模板語法；購物車與後台的刪除確認框顯示商品名稱。
 - 訂單詳情頁改以「前往綠界付款」與「重新查詢付款結果」進行付款；導回時（`?payment=return`）自動查詢一次付款結果。
 - 環境變數 `BASE_URL`、`ECPAY_MERCHANT_ID`、`ECPAY_HASH_KEY`、`ECPAY_HASH_IV`、`ECPAY_ENV` 由「預留未使用」改為實際使用。
 - 文件：FEATURES、ARCHITECTURE、DEVELOPMENT、TESTING、README 補上綠界金流內容；`CLAUDE.md` 改為專案概述 + 常用指令 + 關鍵規則 + 文件引用，並新增綠界付款確認規則。

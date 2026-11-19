@@ -11,11 +11,23 @@ createApp({
     const detailOrder = ref(null);
     const detailLoading = ref(false);
 
+    // 象牙紙面上的狀態膠囊
     const statusMap = {
-      pending: { label: '待付款', cls: 'bg-yellow-100 text-yellow-800' },
-      paid: { label: '已付款', cls: 'bg-green-100 text-green-800' },
-      failed: { label: '付款失敗', cls: 'bg-red-100 text-red-800' },
+      pending: { label: '待付款', cls: 'bg-pending-tint text-pending-ink', dot: 'bg-pending-ink' },
+      paid: { label: '已付款', cls: 'bg-paid-tint text-paid-ink', dot: 'bg-paid-ink' },
+      failed: { label: '付款失敗', cls: 'bg-failed-tint text-failed-ink', dot: 'bg-failed-ink' },
     };
+
+    const filters = [
+      { value: '', label: '全部' },
+      { value: 'pending', label: '待付款' },
+      { value: 'paid', label: '已付款' },
+      { value: 'failed', label: '付款失敗' },
+    ];
+
+    function formatDate(value) {
+      return new Date(value).toLocaleDateString('zh-TW');
+    }
 
     async function loadOrders(page) {
       page = page || 1;
@@ -58,7 +70,7 @@ createApp({
     return {
       orders, pagination, loading, statusFilter,
       detailVisible, detailOrder, detailLoading,
-      statusMap, loadOrders, viewDetail
+      statusMap, filters, formatDate, loadOrders, viewDetail
     };
   }
 }).mount('#app');

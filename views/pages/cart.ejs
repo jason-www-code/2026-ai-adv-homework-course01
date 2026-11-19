@@ -1,111 +1,111 @@
-<div id="app">
-  <h1 class="text-2xl font-bold text-text-primary mb-6" style="font-family: 'Noto Serif TC', serif;">購物車</h1>
-
-  <div v-if="loading" class="flex justify-center py-12">
-    <div class="w-8 h-8 border-4 border-rose-primary border-t-transparent rounded-full animate-spin"></div>
+<div id="app" v-cloak>
+  <div v-if="loading" class="flex justify-center py-32">
+    <div class="spinner" role="status" aria-label="載入中"></div>
   </div>
 
-  <div v-else-if="items.length === 0" class="text-center py-12">
-    <div class="text-4xl mb-3">&#128722;</div>
-    <p class="text-text-secondary mb-1">購物車是空的</p>
-    <p class="text-text-muted text-sm mb-4">快去挑選喜歡的花束吧！</p>
-    <a href="/" class="inline-block bg-rose-primary text-white px-6 py-2 rounded-full text-sm hover:bg-rose-dark transition-colors">去逛逛</a>
-  </div>
+  <!-- 空購物車 -->
+  <section v-else-if="items.length === 0" class="page-x flex min-h-[560px] flex-col items-center justify-center gap-6 text-center xl:min-h-[720px]">
+    <%- include('../partials/icon', { name: 'shopping-bag', cls: 'h-10 w-10 text-mauve xl:h-12 xl:w-12' }) %>
+    <h1 class="font-display text-[32px] leading-[1.2] xl:text-5xl">購物車還是空的</h1>
+    <p class="text-[15px] text-mauve xl:text-[17px]">挑一束花，送給想念的人。</p>
+    <a href="/#products" class="btn-primary mt-4">挑選花束</a>
+  </section>
 
-  <template v-else>
-    <!-- Free shipping banner -->
-    <div v-if="total < 500" class="bg-blush rounded-xl p-3 mb-6 text-sm text-rose-primary text-center">
-      &#127803; 再買 NT$ {{ (500 - total).toLocaleString() }} 即可享免運費！
-    </div>
-    <div v-else class="bg-sage/10 rounded-xl p-3 mb-6 text-sm text-sage text-center">
-      &#10003; 已達免運門檻！
+  <section v-else class="page-x pt-7 pb-14 sm:pt-8 sm:pb-16 md:pt-10 md:pb-20 xl:pt-14 xl:pb-40 2xl:pt-16">
+    <div class="mb-8 flex items-end justify-between xl:mb-12">
+      <h1 class="h-page">購物車</h1>
+      <p class="text-[15px] text-mauve">{{ items.length }} 項商品</p>
     </div>
 
-    <!-- Cart Items -->
-    <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
-      <div
-        v-for="item in items"
-        :key="item.id"
-        class="flex items-center gap-4 p-4 border-b border-gray-50 last:border-0"
-      >
-        <img
-          :src="item.product.image_url || 'https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=100'"
-          :alt="item.product.name"
-          class="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-        />
-        <div class="flex-1 min-w-0">
-          <h3 class="font-medium text-text-primary text-sm truncate">{{ item.product.name }}</h3>
-          <p class="text-rose-primary text-sm">NT$ {{ item.product.price.toLocaleString() }}</p>
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-14 xl:gap-16 2xl:gap-24">
+      <div class="min-w-0 flex-1">
+        <div class="hidden gap-8 border-b border-plum-line pb-4 text-[13px] text-mauve md:flex">
+          <span class="flex-1">商品</span>
+          <span class="w-[142px]">數量</span>
+          <span class="w-[120px] text-right">小計</span>
+          <span class="w-5"></span>
         </div>
 
-        <!-- Quantity Controls -->
-        <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-          <button
-            @click="updateQuantity(item.id, item.quantity - 1)"
-            :disabled="item.quantity <= 1"
-            class="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-text-secondary text-sm disabled:opacity-40"
-          >
-            -
-          </button>
-          <span class="w-8 h-8 flex items-center justify-center text-sm border-x border-gray-200">
-            {{ item.quantity }}
-          </span>
-          <button
-            @click="updateQuantity(item.id, item.quantity + 1)"
-            :disabled="item.quantity >= item.product.stock"
-            class="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-text-secondary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            +
+        <div v-for="item in items" :key="item.id" class="flex items-start gap-4 border-b border-plum-line py-5 md:items-center md:gap-8 md:py-7">
+          <div class="flex min-w-0 flex-1 items-start gap-4 md:items-center md:gap-6">
+            <a :href="'/products/' + item.product_id" class="shrink-0">
+              <img :src="item.product.image_url || fallbackImage" :alt="item.product.name" class="h-[100px] w-20 object-cover sm:h-[110px] sm:w-[88px] md:h-[120px] md:w-24 xl:h-[140px] xl:w-28 2xl:h-[150px] 2xl:w-[120px]">
+            </a>
+            <div class="flex min-w-0 flex-1 flex-col gap-2.5 md:gap-2">
+              <a :href="'/products/' + item.product_id" class="font-display text-xl leading-[1.2] decoration-1 underline-offset-4 hover:underline md:text-2xl">{{ item.product.name }}</a>
+              <p class="text-sm text-mauve">單價 NT$ {{ item.product.price.toLocaleString() }}</p>
+              <div class="flex items-center justify-between pt-1.5 md:hidden">
+                <div class="flex items-center rounded-[2px] border border-plum-line" role="group" :aria-label="item.product.name + ' 數量'">
+                  <button type="button" @click="updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1" class="flex h-[38px] w-[38px] cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40" aria-label="減少數量">
+                    <%- include('../partials/icon', { name: 'minus', cls: 'h-4 w-4' }) %>
+                  </button>
+                  <span class="w-10 text-center font-medium">{{ item.quantity }}</span>
+                  <button type="button" @click="updateQuantity(item.id, item.quantity + 1)" :disabled="item.quantity >= item.product.stock" class="flex h-[38px] w-[38px] cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40" aria-label="增加數量">
+                    <%- include('../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %>
+                  </button>
+                </div>
+                <p class="font-medium">NT$ {{ (item.product.price * item.quantity).toLocaleString() }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden w-[142px] md:block">
+            <div class="inline-flex items-center rounded-[2px] border border-plum-line" role="group" :aria-label="item.product.name + ' 數量'">
+              <button type="button" @click="updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1" class="flex h-11 w-11 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40" aria-label="減少數量">
+                <%- include('../partials/icon', { name: 'minus', cls: 'h-[18px] w-[18px]' }) %>
+              </button>
+              <span class="w-[52px] text-center font-medium">{{ item.quantity }}</span>
+              <button type="button" @click="updateQuantity(item.id, item.quantity + 1)" :disabled="item.quantity >= item.product.stock" class="flex h-11 w-11 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40" aria-label="增加數量">
+                <%- include('../partials/icon', { name: 'plus', cls: 'h-[18px] w-[18px]' }) %>
+              </button>
+            </div>
+          </div>
+          <p class="hidden w-[120px] text-right text-lg font-medium md:block">NT$ {{ (item.product.price * item.quantity).toLocaleString() }}</p>
+          <button type="button" @click="confirmDelete(item.id)" class="cursor-pointer text-mauve transition-colors hover:text-failed" :aria-label="'移除 ' + item.product.name">
+            <%- include('../partials/icon', { name: 'trash-2', cls: 'h-5 w-5' }) %>
           </button>
         </div>
 
-        <p class="text-text-primary font-medium text-sm w-24 text-right">
-          NT$ {{ (item.product.price * item.quantity).toLocaleString() }}
+        <p v-if="total >= 500" class="flex items-center gap-2 pt-6 text-sm text-paid">
+          <%- include('../partials/icon', { name: 'truck', cls: 'h-[18px] w-[18px]' }) %>
+          已達 NT$500 免運門檻
         </p>
-
-        <button
-          @click="confirmDelete(item.id)"
-          class="text-text-muted hover:text-red-500 transition-colors text-sm ml-2"
-        >
-          &#128465;
-        </button>
+        <p v-else class="flex items-center gap-2 pt-6 text-sm text-pending">
+          <%- include('../partials/icon', { name: 'truck', cls: 'h-[18px] w-[18px]' }) %>
+          再買 NT$ {{ (500 - total).toLocaleString() }} 即可免運
+        </p>
       </div>
+
+      <!-- 訂單摘要（象牙紙面） -->
+      <aside class="theme-paper flex flex-col gap-5 bg-paper p-7 text-paper-ink sm:p-10 lg:w-[380px] xl:w-[400px] 2xl:w-[480px]" aria-labelledby="summary-title">
+        <h2 id="summary-title" class="font-display text-2xl leading-[1.2] sm:text-[28px]">訂單摘要</h2>
+        <div class="flex items-center justify-between text-[15px]">
+          <span class="text-paper-ink-2">商品小計</span>
+          <span>NT$ {{ total.toLocaleString() }}</span>
+        </div>
+        <div class="flex items-center justify-between text-[15px]">
+          <span class="text-paper-ink-2">運費</span>
+          <span>{{ total >= 500 ? '免運' : 'NT$ 150' }}</span>
+        </div>
+        <div class="flex items-center justify-between border-t border-paper-line pt-5">
+          <span class="font-medium">總計</span>
+          <span class="text-[26px] font-bold">NT$ {{ (total + (total >= 500 ? 0 : 150)).toLocaleString() }}</span>
+        </div>
+        <button type="button" @click="goCheckout" class="btn-paper w-full py-[18px]">前往結帳</button>
+        <p v-if="!loggedIn" class="text-[13px] text-paper-ink-2">結帳前需要先登入會員。</p>
+      </aside>
     </div>
+  </section>
 
-    <!-- Summary -->
-    <div class="bg-white rounded-2xl shadow-sm p-6">
-      <div class="flex justify-between items-center mb-2 text-sm">
-        <span class="text-text-secondary">商品小計</span>
-        <span class="text-text-primary">NT$ {{ total.toLocaleString() }}</span>
-      </div>
-      <div class="flex justify-between items-center mb-4 text-sm">
-        <span class="text-text-secondary">運費</span>
-        <span class="text-text-primary">{{ total >= 500 ? '免運' : 'NT$ 150' }}</span>
-      </div>
-      <div class="border-t border-gray-100 pt-4 flex justify-between items-center">
-        <span class="font-bold text-text-primary">總計</span>
-        <span class="font-bold text-xl text-rose-primary">
-          NT$ {{ (total + (total >= 500 ? 0 : 150)).toLocaleString() }}
-        </span>
-      </div>
-      <button
-        @click="goCheckout"
-        class="w-full mt-4 bg-rose-primary text-white py-3 rounded-full text-sm font-medium hover:bg-rose-dark transition-colors"
-      >
-        前往結帳
-      </button>
-    </div>
-  </template>
-
-  <!-- Confirm Dialog -->
-  <div v-if="confirmVisible" class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/40" @click="confirmVisible = false"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 text-center">
-      <h3 class="text-lg font-semibold text-text-primary mb-2">確認移除</h3>
-      <p class="text-text-secondary text-sm mb-6">確定要從購物車中移除這個商品嗎？</p>
-      <div class="flex gap-3 justify-center">
-        <button @click="confirmVisible = false" class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-text-secondary hover:bg-gray-50">取消</button>
-        <button @click="handleDelete" class="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600">確認移除</button>
+  <!-- 移除確認：桌機置中，手機為底部抽屜 -->
+  <div v-if="confirmVisible" class="fixed inset-0 z-[80] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="remove-title">
+    <div class="absolute inset-0 bg-[#1A0F16]/70" @click="confirmVisible = false"></div>
+    <div class="theme-paper relative flex w-full flex-col gap-5 bg-paper px-5 pt-8 pb-9 text-paper-ink shadow-[0_24px_64px_rgba(0,0,0,0.4)] sm:mx-6 sm:max-w-[480px] sm:gap-6 sm:p-10">
+      <h3 id="remove-title" class="font-display text-2xl leading-[1.2] sm:text-[28px]">要移除這項商品嗎？</h3>
+      <p class="text-[15px] leading-[1.7] text-paper-ink-2">「{{ deleteItemName }}」會從購物車中移除。</p>
+      <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+        <button type="button" @click="confirmVisible = false" class="btn-paper-outline w-full sm:w-auto">取消</button>
+        <button type="button" @click="handleDelete" class="btn-danger w-full sm:w-auto">移除</button>
       </div>
     </div>
   </div>

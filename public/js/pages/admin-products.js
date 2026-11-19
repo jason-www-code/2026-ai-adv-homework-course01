@@ -13,6 +13,8 @@ createApp({
 
     const confirmVisible = ref(false);
     const deleteId = ref('');
+    const deleteName = ref('');
+    const fallbackImage = '/images/products/seasonal.jpg';
 
     async function loadProducts(page) {
       page = page || 1;
@@ -75,8 +77,9 @@ createApp({
       }
     }
 
-    function confirmDeleteFn(id) {
-      deleteId.value = id;
+    function confirmDeleteFn(product) {
+      deleteId.value = product.id;
+      deleteName.value = product.name;
       confirmVisible.value = true;
     }
 
@@ -98,7 +101,7 @@ createApp({
     return {
       products, pagination, loading,
       modalVisible, editingProduct, saving, form,
-      confirmVisible,
+      confirmVisible, deleteName, fallbackImage,
       loadProducts, openCreate, openEdit, handleSave,
       confirmDeleteFn, handleDelete
     };

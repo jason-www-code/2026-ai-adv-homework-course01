@@ -148,7 +148,7 @@ npm run dev:server          # http://localhost:3001
 
 ## 8. 新增頁面的步驟
 
-1. 建立 `views/pages/<page>.ejs`（後台放 `views/pages/admin/`），根元素為 `<div id="app">`，需要的 URL 參數以 `data-*` 屬性注入。
+1. 建立 `views/pages/<page>.ejs`（後台放 `views/pages/admin/`），根元素為 `<div id="app" v-cloak>`（Vue 掛載前隱藏模板），需要的 URL 參數以 `data-*` 屬性注入。前台頁面自行加 `.page-x` 控制左右外距（layout 的 `main` 不限寬度）。
 2. 建立 `public/js/pages/<page>.js`，以 `createApp(...).mount('#app')` 啟動；需登入的頁面在 `setup()` 開頭 `if (!Auth.requireAuth()) return {};`。
 3. 在 `src/routes/pageRoutes.js` 加入路由，使用 `renderFront(res, '<page>', { title, pageScript: '<page>' })` 或 `renderAdmin(res, '<page>', { title, pageScript, currentPath })`。
 4. 後台頁面需在 `views/partials/admin-sidebar.ejs` 加入連結（以 `currentPath` 判斷 active）。
@@ -223,7 +223,20 @@ router.patch('/:id/pay', (req, res) => { ... });
 - 所有 API 呼叫使用 `apiFetch(url, { method, body: JSON.stringify(...) })`；它會自動加上 `Content-Type`、`Authorization`、`X-Session-Id`。
 - `apiFetch` 遇到 401 會清除登入資訊並跳轉 `/login`，並回傳 `undefined`；呼叫端在 401 情境下拿不到錯誤物件。
 - 非 2xx 時拋出 `{ status, data }`，可用 `err?.data?.message` 顯示後端訊息。
-- 色彩請使用 `input.css` 中 `@theme` 定義的 token（`rose-primary`、`sage`、`apricot`、`cream`、`text-secondary` 等），標題字型使用 `Noto Serif TC`。
+- 視覺依「夜色花房」設計稿（`design/flower-life/flower-life.pen`，規格見 [plans/archive/2026-11-19-pencil-redesign.md](./plans/archive/2026-11-19-pencil-redesign.md)）。色彩只用 `input.css` `@theme` 的 token，不要寫死色碼：
+
+  | 用途 | token |
+  |---|---|
+  | 前台深色底、文字 | `plum-night`（底）、`plum-raised`（輸入框、頁尾）、`plum-line`（分隔線）、`ivory`（主要文字）、`mauve`（次要文字） |
+  | 主要動作與選取狀態 | `marigold`（每個畫面只給一個主要動作）、`marigold-dark`（hover） |
+  | 象牙紙面（購物車摘要、結帳訂購單、訂單收據、後台內容區） | `paper`、`paper-sunk`、`paper-line`、`paper-ink`、`paper-ink-2` |
+  | 訂單狀態 | 深色底用 `pending`／`paid`／`failed`；紙面用 `*-ink` 文字配 `*-tint` 底 |
+
+- 字體：標題與商品名稱用 `font-display`（Cactus Classical Serif，只有 400 字重，靠字級拉開層級）；內文、數字、按鈕用預設的 Noto Sans TC。
+- 斷點：`sm` 576、`md` 768、`lg` 1024（桌機版型起點）、`xl` 1440、`2xl` 1920。前台左右外距用 `.page-x`（20／24／40／96／160）。
+- 共用 class（`@layer components`）：`.btn-primary`（金盞）、`.btn-outline`、`.btn-paper`／`.btn-paper-outline`（紙面上）、`.btn-danger`、`.field-dark`／`.field-paper`（輸入框）、`.field-label`／`.field-label-paper`、`.field-error`、`.badge`（狀態膠囊）、`.spinner`／`.spinner-paper`、`.h-section`、`.h-page`。紙面區塊加 `theme-paper`，focus 外框會改為深色。
+- 圖示用 `<%- include('../partials/icon', { name: 'truck', cls: 'h-5 w-5' }) %>`（路徑依頁面深度調整；可用名稱見 `views/partials/icon.ejs`），需要新圖示時從 lucide 複製 path 加入該檔。
+- 照片 0 圓角、按鈕與輸入框 2px（`rounded-[2px]`）、只有狀態膠囊全圓角；不用「白卡＋陰影」。
 - Vue 透過 unpkg 載入且未鎖定版本，需要網路連線。
 
 ## 11. 計畫歸檔流程

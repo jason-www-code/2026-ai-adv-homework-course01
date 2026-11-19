@@ -15,19 +15,31 @@ createApp({
     const redirecting = ref(false);
     const verifying = ref(false);
 
+    // 深色底狀態膠囊
     const statusMap = {
-      pending: { label: '待付款', cls: 'bg-apricot/20 text-apricot' },
-      paid: { label: '已付款', cls: 'bg-sage/20 text-sage' },
-      failed: { label: '付款失敗', cls: 'bg-red-100 text-red-600' },
+      pending: { label: '待付款', cls: 'border-pending text-pending', dot: 'bg-pending' },
+      paid: { label: '已付款', cls: 'border-paid text-paid', dot: 'bg-paid' },
+      failed: { label: '付款失敗', cls: 'border-failed text-failed', dot: 'bg-failed' },
+    };
+
+    // 象牙紙面（收據）上的狀態膠囊
+    const paperStatusMap = {
+      pending: { cls: 'bg-pending-tint text-pending-ink', dot: 'bg-pending-ink' },
+      paid: { cls: 'bg-paid-tint text-paid-ink', dot: 'bg-paid-ink' },
+      failed: { cls: 'bg-failed-tint text-failed-ink', dot: 'bg-failed-ink' },
     };
 
     const paymentMessages = {
-      success: { text: '付款成功！感謝您的購買。', cls: 'bg-sage/10 text-sage border border-sage/20' },
-      failed: { text: '付款未完成，請重新付款。', cls: 'bg-red-50 text-red-600 border border-red-100' },
-      cancel: { text: '付款已取消。', cls: 'bg-apricot/10 text-apricot border border-apricot/20' },
-      pending: { text: '尚未收到付款確認，若已完成付款請稍後按「重新查詢付款結果」。', cls: 'bg-apricot/10 text-apricot border border-apricot/20' },
-      mismatch: { text: '付款金額與訂單不符，請聯繫客服。', cls: 'bg-red-50 text-red-600 border border-red-100' },
+      success: { text: '付款成功！感謝您的購買。', cls: 'border-paid bg-paid/10', icon: 'circle-check', iconCls: 'text-paid' },
+      failed: { text: '付款未完成，請重新付款。', cls: 'border-failed bg-failed/10', icon: 'circle-x', iconCls: 'text-failed' },
+      cancel: { text: '付款已取消。', cls: 'border-pending bg-pending/10', icon: 'circle-minus', iconCls: 'text-pending' },
+      pending: { text: '尚未收到付款確認，若已完成付款請稍後按「重新查詢付款結果」。', cls: 'border-pending bg-pending/10', icon: 'clock', iconCls: 'text-pending' },
+      mismatch: { text: '付款金額與訂單不符，請聯繫客服。', cls: 'border-failed bg-failed/10', icon: 'triangle-alert', iconCls: 'text-failed' },
     };
+
+    function formatDate(value) {
+      return new Date(value).toLocaleDateString('zh-TW');
+    }
 
     // 查詢結果 → 提示訊息
     const resultToMessage = {
@@ -106,7 +118,7 @@ createApp({
     });
 
     return {
-      order, loading, redirecting, verifying, paymentResult, statusMap, paymentMessages,
+      order, loading, redirecting, verifying, paymentResult, statusMap, paperStatusMap, paymentMessages, formatDate,
       goEcpay, verifyPayment: function () { verifyPayment(false); }
     };
   }
